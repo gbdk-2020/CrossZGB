@@ -156,11 +156,11 @@ void SpriteManagerLoad(UINT8 sprite_type) {
 	SWITCH_ROM(__save);
 }
 
-Sprite* cachedSprite; //This has to be declared outside because of an LCC bug (easy to see with the Princess' Axe)
 Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
-	Sprite* sprite;
-	UINT8 sprite_idx;
-	UINT16 spriteIdxTmp; //Yes, another bug in the compiler forced me to change the type here to UINT16 instead of UINT8
+	Sprite *sprite, *cached_sprite;
+	UINT8 sprite_idx, cached_sprite_idx;
+
+	if (VECTOR_LEN(sprite_manager_updatables) > (N_SPRITE_MANAGER_SPRITES - 1)) return NULL;
 
 	SpriteManagerLoad(sprite_type);
 
@@ -179,9 +179,9 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	sprite->y = y;
 	sprite->unique_id = SPRITE_UNIQUE_ID(x >> 3, (y + sprite->coll_h - 1) >> 3);
 
-	//Before calling start THIS and THIS_IDX must be set
-	cachedSprite = THIS;
-	spriteIdxTmp = THIS_IDX;
+	//Before calling start THIS and THIS_IDX must be set, preserve the old values
+	cached_sprite = THIS;
+	cached_sprite_idx = THIS_IDX;
 	THIS = sprite;
 	THIS_IDX = VECTOR_LEN(sprite_manager_updatables) - 1;
 
@@ -191,8 +191,8 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	SWITCH_ROM(__save);
 
 	//And now they must be restored
-	THIS = cachedSprite;
-	THIS_IDX = spriteIdxTmp;
+	THIS = cached_sprite;
+	THIS_IDX = cached_sprite_idx;
 	return sprite;
 }
 
