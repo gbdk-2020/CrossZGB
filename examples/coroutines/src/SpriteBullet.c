@@ -18,10 +18,13 @@ extern Sprite * PLAYER;
 #define TARGET_X_COORD (PLAYER->x + (PLAYER_WIDTH / 2))
 #define TARGET_Y_COORD (PLAYER->y + (PLAYER_HEIGHT / 2))
 
+// define the CUSTOM_DATA struct which holds the pointer to the allocated coroutine context
 typedef struct {
 	void * ctx;
 } CUSTOM_DATA;
 CHECK_CUSTOM_DATA_SIZE(CUSTOM_DATA);
+// define helper macro for the easy access to the allocated coroutine context pointer
+#define THIS_CTX (((CUSTOM_DATA*)THIS->custom_data)->ctx)
 
 // bullet sprite logic coroutine
 // use local variables to hold the sprite logic state
@@ -44,21 +47,16 @@ void SpriteBulletLogic(void * user_data) BANKED {
 }
 
 void START(void) {
-	CUSTOM_DATA * data = (CUSTOM_DATA*)THIS->custom_data;
-	// allocate coroutine context, set coroutine function and pass THIS as data
-	data->ctx = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), (void *)THIS);
+	// allocate coroutine context, set coroutine function and pass THIS as data, remove sprite if failed
+	if (!(THIS_CTX = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), (void *)THIS))) SpriteManagerRemove(THIS_IDX);
 }
 
 void UPDATE(void) {
-	void * ctx = ((CUSTOM_DATA*)THIS->custom_data)->ctx;
-	// if context was allocated, iterate coroutine, otherwise remove sprite
-	if (ctx) { 
-		// iterate coroutine, if it finishes normally - remove sprite
-		if (!coro_runner_process(ctx)) SpriteManagerRemove(THIS_IDX);
-	} else SpriteManagerRemove(THIS_IDX);
+	// iterate coroutine, if it finishes normally - remove sprite
+	if (!coro_runner_process(THIS_CTX)) SpriteManagerRemove(THIS_IDX);
 }
 
 void DESTROY(void) {
 	// deallocate coroutine context
-	coro_runner_free(((CUSTOM_DATA*)THIS->custom_data)->ctx);
+	coro_runner_free(THIS_CTX);
 }
