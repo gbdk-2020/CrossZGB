@@ -17,15 +17,15 @@ typedef struct coro_runner_context_t {
 // initialize coroutine runner
 void coro_runner_init(void);
 
-// start coroutine, return coroutine id
+// start coroutine, return coroutine context, NULL if failed
 void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data);
 
-// process coroutines (run each until yield)
+// process coroutine
 inline bool coro_runner_process(void * ctx) {
     return coro_continue(&((coro_runner_context_t *)ctx)->coro_context);
 }
 
-// kill running coroutine and free context
+// free coroutine context
 void coro_runner_free(void * ctx);
 
 
