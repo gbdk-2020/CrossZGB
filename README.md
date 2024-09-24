@@ -23,6 +23,9 @@ It uses [GBDK 2020](https://github.com/gbdk-2020/gbdk-2020/releases/latest) but 
   - Follow the tutorial on the [wiki](https://github.com/gbdk-2020/CrossZGB/wiki) to understand the basic concepts of the engine
 - (**Optional**) Download [***Microsoft Visual Studio Community Edition***](https://www.visualstudio.com/downloads/) or the [***Microsoft Visual Studio Code***](https://code.visualstudio.com/download/)
 
+## Examples
+See the included basic [example projects](/examples) as well as the [Made with CrossZGB](https://github.com/gbdk-2020/CrossZGB/wiki/Made-with-CrossZGB) Wiki page for source code and demonstrations of how to target multiple platforms and use other features of the engine.
+
 ## Documentation
 Check the [wiki](https://github.com/gbdk-2020/CrossZGB/wiki) and this README
 
