@@ -27,28 +27,28 @@ CHECK_CUSTOM_DATA_SIZE(CUSTOM_DATA);
 #define THIS_CTX (((CUSTOM_DATA*)THIS->custom_data)->ctx)
 
 // bullet sprite logic coroutine
-// use local variables to hold the sprite logic state
-void SpriteBulletLogic(Sprite * THIS) BANKED {
-	// initialize the Bresenham algo state
+// since we are calling the sprite coroutine from within the UPDATE handler only, THIS and THIS_IDX are valid
+void SpriteBulletLogic(void * custom_data) BANKED {
+	custom_data;
+	// initialize the Bresenham algo, use local variables to hold the sprite logic state
 	INT16 dx  =  abs(TARGET_X_COORD - THIS->x);
 	INT16 dy  = -abs(TARGET_Y_COORD - THIS->y);
 	INT16 err = dx + dy; 
 	INT8  sx  = (TARGET_X_COORD > THIS->x) ? 1 : -1;
 	INT8  sy  = (TARGET_Y_COORD > THIS->y) ? 1 : -1;
-
-	// iterate one step of the Bresenham algo 50 times, then exit
+	// iterate the Bresenham algo 50 times, then exit
 	for (UINT8 i = 50; i != 0; i--) {
 		INT16 e2 = err << 1;
 		if (e2 > dy) { err += dy; THIS->x += sx; }
 		if (e2 < dx) { err += dx; THIS->y += sy; }
-
+		// yield coroutine execution
 		coro_yield();
 	}
 }
 
 void START(void) {
 	// allocate coroutine context, set coroutine function and pass THIS as data, remove sprite if failed
-	if (!(THIS_CTX = coro_runner_alloc((coro_t)SpriteBulletLogic, BANK(SpriteBullet), (void *)THIS))) SpriteManagerRemove(THIS_IDX);
+	if (!(THIS_CTX = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), NULL))) SpriteManagerRemove(THIS_IDX);
 }
 
 void UPDATE(void) {
