@@ -197,19 +197,13 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 }
 
 void SpriteManagerRemove(int idx) {
-	sprite_manager_removal_check = 1;
 	sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, idx)]->marked_for_removal = 1;
+	sprite_manager_removal_check = 1;
 }
 
 void SpriteManagerRemoveSprite(Sprite* sprite) {
-	Sprite* s;
-	for(UINT8 i = 0u; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
-		s = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, i)];
-		if(s == sprite) {
-			SpriteManagerRemove(i);
-			break;
-		}
-	}
+	sprite->marked_for_removal = 1;
+	sprite_manager_removal_check = 1;
 }
 
 void SpriteManagerFlushRemove(void) {
