@@ -48,12 +48,12 @@ void SpriteBulletLogic(void * custom_data) BANKED {
 
 void START(void) {
 	// allocate coroutine context, set coroutine function and pass THIS as data, remove sprite if failed
-	if (!(THIS_CTX = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), NULL))) SpriteManagerRemove(THIS_IDX);
+	if (!(THIS_CTX = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), NULL))) SpriteManagerRemoveSprite(THIS);
 }
 
 void UPDATE(void) {
 	// iterate coroutine, if it finishes normally - remove sprite
-	if (!coro_runner_process(THIS_CTX)) SpriteManagerRemove(THIS_IDX);
+	if (!coro_runner_process(THIS_CTX)) SpriteManagerRemoveSprite(THIS);
 }
 
 void DESTROY(void) {
