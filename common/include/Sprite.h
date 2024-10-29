@@ -38,10 +38,12 @@ typedef struct {
 	UINT8 coll_w, coll_h;
 
 	//For the sprite manager
-	UINT8 type; //Customizable per game
+	UINT8 type;          //Customizable per game
 	UINT8 marked_for_removal;
 	UINT16 lim_x, lim_y; //limits offscren where the sprite will be deleted (0 means inmediatelly)
 	UINT16 unique_id;
+
+	UINT8 visible;       //visibility (not rendered if zero)
 
 	UINT8 custom_data[CUSTOM_DATA_SIZE];
 } Sprite;
@@ -61,6 +63,9 @@ typedef struct {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
+inline void SetVisible(Sprite* sprite, UINT8 visible) {
+	sprite->visible = visible;
+}
 void SetFrame(Sprite* sprite, UINT8 frame);
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
