@@ -196,7 +196,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	return sprite;
 }
 
-void SpriteManagerRemove(int idx) {
+void SpriteManagerRemove(UINT8 idx) {
 	sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, idx)]->marked_for_removal = 1;
 	sprite_manager_removal_check = 1;
 }
