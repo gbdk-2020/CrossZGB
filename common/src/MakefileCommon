@@ -20,7 +20,7 @@ endif
 
 # Configure platform specific link and binary making flags here:
 BINFLAGS_gb      = 
-BINFLAGS_pocket  = 
+BINFLAGS_pocket  = -Wm-yc
 BINFLAGS_duck    = 
 BINFLAGS_gbc     = -Wm-yc
 BINFLAGS_sms     = 
@@ -67,7 +67,7 @@ ADDR_sms = $(ADDR_gg)
 CFLAGS_gb = -DDEFAULT_COLOR_DEPTH=2
 CFLAGS_gbc = $(CFLAGS_gb) -DCGB
 CFLAGS_duck = $(CFLAGS_gb)
-CFLAGS_pocket = $(CFLAGS_gb)
+CFLAGS_pocket = $(CFLAGS_gbc)
 CFLAGS_gg = -Wf--nmos-z80 -DDEFAULT_COLOR_DEPTH=4
 CFLAGS_sms = $(CFLAGS_gg)
 
