@@ -223,6 +223,8 @@ void SpriteManagerFlushRemove(void) {
 	SWITCH_ROM(__save);
 }
 
+void DrawSprite(void); // declared in Sprite.c
+
 UINT8 enable_flickering = 1;
 UINT8 THIS_IDX = 0;
 Sprite* THIS = 0;

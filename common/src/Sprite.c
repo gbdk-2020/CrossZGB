@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include "vector.h"
 #include "Sprite.h"
 #include "Scroll.h"
 #include "SpriteManager.h"
@@ -55,9 +56,9 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 }
 
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
-	if(sprite->anim_data != data) {
+	if (sprite->anim_data != data) {
 		sprite->anim_data = (UINT8* )data;
-		SetFrame(sprite, data[1]);
+		SetFrame(sprite, VECTOR_GET(data, 0));
 		sprite->anim_frame = 0;
 		sprite->anim_accum_ticks = 0;
 		sprite->anim_speed = speed;
@@ -76,11 +77,11 @@ void DrawSprite(void) {
 		THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
 		if(THIS->anim_accum_ticks > (UINT8)100u) {
 			THIS->anim_frame ++;
-			if(THIS->anim_frame == THIS->anim_data[0]){
+			if(THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)){
 				THIS->anim_frame = 0;
 			}
 
-			UINT8 tmp = THIS->anim_data[(UINT8)1u + THIS->anim_frame]; //Do this before changing banks, anim_data is stored on current bank
+			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); //Do this before changing banks, anim_data is stored on current bank
 			UINT8 __save = CURRENT_BANK;
 			SWITCH_ROM(THIS->mt_sprite_bank);
 				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];

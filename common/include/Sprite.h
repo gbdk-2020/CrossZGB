@@ -3,6 +3,7 @@
 
 #include <gbdk/platform.h>
 
+#include "vector.h"
 #include "OAMManager.h"
 #include "MetaSpriteInfo.h"
 #include "Flip.h"
@@ -63,13 +64,20 @@ typedef struct {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
-inline void SetVisible(Sprite* sprite, UINT8 visible) {
-	sprite->visible = visible;
-}
 void SetFrame(Sprite* sprite, UINT8 frame);
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
-void DrawSprite(void);
+
+inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
+	if (sprite->anim_data) {
+		SetFrame(sprite, VECTOR_GET(sprite->anim_data, frame));
+		sprite->anim_frame = frame;
+		sprite->anim_accum_ticks = 0;
+	}
+}
+inline void SetVisible(Sprite* sprite, UINT8 visible) {
+	sprite->visible = visible;
+}
 
 UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y);
 
