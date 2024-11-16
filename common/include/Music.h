@@ -46,6 +46,15 @@ inline void INIT_SOUND(void) {
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
 
 	#define MuteMusicChannels(CHANNELS) (music_mute_mask = (CHANNELS))
+#elif defined(MUSIC_DRIVER_PSGLIB)
+	#include "PSGlib.h"
+
+	#define INIT_MUSIC
+	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _psg; extern const void SONG ## _psg
+	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _psg, (uint8_t)&__bank_ ## SONG ## _psg, LOOP)
+	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
+
+	#define MuteMusicChannels(CHANNELS) (PSGMuteMask = (CHANNELS))
 #elif defined(MUSIC_DRIVER_BANJO)
 	#include "banjo.h"
 

@@ -268,7 +268,10 @@ tools/vgm2data/vgm2data.exe
 tools/vgm2data/vgm2data
 tools/fxhammer2data/fxhammer2data.exe
 tools/fxhammer2data/fxhammer2data
-
+tools/vgm2psg/vgm2psg.exe
+tools/vgm2psg/vgm2psg
+tools/psgcomp/psgcomp.exe
+tools/psgcomp/psgcomp
 
 tools/*/*.o
 tools/*/*/*.o
