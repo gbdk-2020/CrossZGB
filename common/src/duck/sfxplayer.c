@@ -3,7 +3,7 @@
 #include "Sound.h"
 
 #define PERIOD_8192 0x700
-#define LENGTH_8192 0x3f
+#define LENGTH_8192 0xfe
 #define PERIOD_1920 0x3BB
 #define LENGTH_1920 0x3b
 

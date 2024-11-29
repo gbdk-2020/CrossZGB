@@ -3,6 +3,7 @@
 
 #include <gbdk/platform.h>
 
+#include "vector.h"
 #include "OAMManager.h"
 #include "MetaSpriteInfo.h"
 #include "Flip.h"
@@ -38,10 +39,12 @@ typedef struct {
 	UINT8 coll_w, coll_h;
 
 	//For the sprite manager
-	UINT8 type; //Customizable per game
+	UINT8 type;          //Customizable per game
 	UINT8 marked_for_removal;
 	UINT16 lim_x, lim_y; //limits offscren where the sprite will be deleted (0 means inmediatelly)
 	UINT16 unique_id;
+
+	UINT8 visible;       //visibility (not rendered if zero)
 
 	UINT8 custom_data[CUSTOM_DATA_SIZE];
 } Sprite;
@@ -64,7 +67,17 @@ typedef struct {
 void SetFrame(Sprite* sprite, UINT8 frame);
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
-void DrawSprite(void);
+
+inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
+	if (sprite->anim_data) {
+		SetFrame(sprite, VECTOR_GET(sprite->anim_data, frame));
+		sprite->anim_frame = frame;
+		sprite->anim_accum_ticks = 0;
+	}
+}
+inline void SetVisible(Sprite* sprite, UINT8 visible) {
+	sprite->visible = visible;
+}
 
 UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y);
 

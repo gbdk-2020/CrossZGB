@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include "vector.h"
 #include "Sprite.h"
 #include "Scroll.h"
 #include "SpriteManager.h"
@@ -45,6 +46,8 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 	sprite->x = 0;
 	sprite->y = 0;
 
+	sprite->visible = 1u;
+
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
 		sprite->coll_w = mt_sprite_info->width;
@@ -53,9 +56,9 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 }
 
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
-	if(sprite->anim_data != data) {
+	if (sprite->anim_data != data) {
 		sprite->anim_data = (UINT8* )data;
-		SetFrame(sprite, data[1]);
+		SetFrame(sprite, VECTOR_GET(data, 0));
 		sprite->anim_frame = 0;
 		sprite->anim_accum_ticks = 0;
 		sprite->anim_speed = speed;
@@ -69,17 +72,16 @@ extern UINT8 next_oam_idx;
 void DrawSprite(void) {
 	UINT16 screen_x;
 	UINT16 screen_y;
-	UINT8 tmp;
 
-	if(THIS->anim_data) {	
+	if (THIS->anim_data) {	
 		THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
 		if(THIS->anim_accum_ticks > (UINT8)100u) {
 			THIS->anim_frame ++;
-			if(THIS->anim_frame == THIS->anim_data[0]){
+			if(THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)){
 				THIS->anim_frame = 0;
 			}
 
-			tmp = THIS->anim_data[(UINT8)1u + THIS->anim_frame]; //Do this before changing banks, anim_data is stored on current bank
+			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); //Do this before changing banks, anim_data is stored on current bank
 			UINT8 __save = CURRENT_BANK;
 			SWITCH_ROM(THIS->mt_sprite_bank);
 				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
@@ -91,10 +93,9 @@ void DrawSprite(void) {
 	screen_x = THIS->x - scroll_x;
 	screen_y = THIS->y - scroll_y;
 	//It might sound stupid adding 32 in both sides but remember the values are unsigned! (and maybe truncated after substracting scroll_)
-	if(((screen_x + 32u) < SCREENWIDTH_PLUS_32) && ((screen_y + 32) < SCREENHEIGHT_PLUS_32)) {
+	if (((screen_x + 32u) < SCREENWIDTH_PLUS_32) && ((screen_y + 32) < SCREENHEIGHT_PLUS_32) && (THIS->visible)) {
 		screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
 		screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
-		tmp = next_oam_idx;
 		UINT8 __save = CURRENT_BANK;
 		SWITCH_ROM(THIS->mt_sprite_bank);
 			switch(THIS->mirror)

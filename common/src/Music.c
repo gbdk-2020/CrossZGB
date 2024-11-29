@@ -27,6 +27,10 @@ inline void __SetMusicMuteMask(UINT8 mask) {
 	gbt_enable_channels(0xF & ~(mask));
 	gbt_reset_ch3_instrument();
 }
+#elif defined(MUSIC_DRIVER_PSGLIB)
+inline void __SetMusicMuteMask(UINT8 mask) {
+	PSGMuteMask = mask;
+}
 #elif defined(MUSIC_DRIVER_BANJO)
 void __InitMusicDriver(void) NONBANKED {
 	UBYTE __save = CURRENT_BANK;
@@ -102,6 +106,11 @@ void MUSIC_isr(void) NONBANKED {
 	UBYTE __save = CURRENT_BANK;
 	gbt_update();
 	SWITCH_ROM(__save);
+#elif defined(MUSIC_DRIVER_PSGLIB)
+	UBYTE __save = CURRENT_BANK;
+	SWITCH_ROM(last_music_bank);
+	PSGFrame();
+	SWITCH_ROM(__save);
 #elif defined(MUSIC_DRIVER_BANJO)
 	UBYTE __save = CURRENT_BANK, __save2 = MAP_FRAME2;
 	SWITCH_ROM(1);
@@ -124,6 +133,9 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 		INIT_SOUND();
 		SWITCH_ROM(bank);
 		hUGE_init(music);
+#elif defined(MUSIC_DRIVER_PSGLIB)
+		SWITCH_ROM(bank);
+		PSGPlay(music, loop);
 #elif defined(MUSIC_DRIVER_BANJO)
 		UBYTE __save2 = MAP_FRAME2;
 		SWITCH_ROM(1);
