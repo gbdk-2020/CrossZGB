@@ -54,7 +54,7 @@ inline void INIT_SOUND(void) {
 	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _psg, (uint8_t)&__bank_ ## SONG ## _psg, LOOP)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
 
-	#define MuteMusicChannels(CHANNELS) (PSGMuteMask = (CHANNELS))
+	#define MuteMusicChannels(CHANNELS) PSGMuteChannels(CHANNELS)
 #elif defined(MUSIC_DRIVER_BANJO)
 	#include "banjo.h"
 

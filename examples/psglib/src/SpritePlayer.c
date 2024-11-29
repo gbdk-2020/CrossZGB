@@ -5,6 +5,10 @@
 #include "SpriteManager.h"
 #include "Keys.h"
 #include "ZGBMain.h"
+#include "Sound.h"
+
+DECLARE_SFX(sound0);
+DECLARE_SFX(sound1);
 
 // Animation state enum
 typedef enum {
@@ -62,6 +66,8 @@ void UPDATE(void) {
 		if (THIS->y < (SCREEN_HEIGHT - 16)) THIS->y++;
 		anim = ANIM_WALK_DOWN;
 	}
+	if (KEY_TICKED(J_A)) ExecuteSFX(BANK(sound0), sound0, SFX_MUTE_MASK(sound0), SFX_PRIORITY_NORMAL);
+	if (KEY_TICKED(J_B)) ExecuteSFX(BANK(sound1), sound1, SFX_MUTE_MASK(sound1), SFX_PRIORITY_NORMAL);
 
 	// if animation state variable changed, then set the new animation for the player sprite
 	if (old_anim != anim) SetSpriteAnim(THIS, animations[anim], ANIMATION_SPEED);
