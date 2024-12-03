@@ -46,8 +46,6 @@ static shadow_reg_t PSGShadow[4];       // shadow registers to retrigger channel
 static uint8_t PSGSubLen;               // length of the substring we are playing
 static void *PSGSubRetAddr = 0;         // return to this address when substring is over
 
-static const uint8_t PSGMuteBits[] = {1, 2, 4, 8};
-
 void PSGPlay (void *song, uint8_t loop) {
     PSGLoopFlag = loop;
     PSGStart = song;                    // store the beginning point of music
@@ -68,7 +66,7 @@ void PSGPlay (void *song, uint8_t loop) {
 void PSGRetriggerChannels(uint8_t mask) NAKED {
     mask;
     __asm
-        and #0b00001111
+        and #(PSG_CHANNEL0 | PSG_CHANNEL1 | PSG_CHANNEL2 | PSG_CHANNEL3)
         ret z                           ; if nothing to retrigger then return
         ld c, #_PSGPort                 ; c points to the PSG port
         ld hl, #_PSGShadow              ; hl points to shadow regs copy
@@ -92,7 +90,7 @@ void PSGRetriggerChannels(uint8_t mask) NAKED {
 void PSGCutChannels(uint8_t mask) NAKED {
     mask;
     __asm
-        and #0b00001111
+        and #(PSG_CHANNEL0 | PSG_CHANNEL1 | PSG_CHANNEL2 | PSG_CHANNEL3)
         ret z                           ; if nothing to retrigger then return
         ld c, #_PSGPort                 ; c points to the PSG port
         ld hl, #2$                      ; hl points to the muting data
@@ -129,22 +127,22 @@ void PSGFrame (void) NAKED {
         dec (hl)
         ret
 0$:
-        ld de,(_PSGPointer)             ; read current address
+        ld de, (_PSGPointer)            ; read current address
 
 11$:
-        ld a,(de)
-        ld b,a                          ; load PSG byte (in B)
+        ld a, (de)
+        ld b, a                         ; load PSG byte (in B)
         inc de                          ; point to next byte
-        ld a,(_PSGSubLen)               ; read substring len
+        ld a, (_PSGSubLen)              ; read substring len
         or a
-        jr z,1$                         ; check if it is 0 (we are not in a substring)
+        jr z, 1$                        ; check if it is 0 (we are not in a substring)
         dec a                           ; decrease len
-        ld (_PSGSubLen),a               ; save len
-        jr nz,1$
-        ld de,(_PSGSubRetAddr)          ; substring is over, retrieve return address
+        ld (_PSGSubLen), a              ; save len
+        jr nz, 1$
+        ld de, (_PSGSubRetAddr)         ; substring is over, retrieve return address
 
 1$:
-        ld a,b                          ; copy PSG byte into A
+        ld a, b                         ; copy PSG byte into A
         cp PSGLatch                     ; is it a latch?
         jp c, 7$                        ; if < $80 then it is NOT a latch
 
@@ -157,7 +155,7 @@ void PSGFrame (void) NAKED {
 
         ld (_PSGLastChannel), a         ; store last latched channel
 
-        ld hl, #_PSGMuteBits
+        ld hl, #15$                     ; point to the mute bits array
         add l
         ld l, a
         adc h
@@ -169,6 +167,8 @@ void PSGFrame (void) NAKED {
         ld (_PSGLastMuted), a           ; do not write data to PSG flag
         jp nz, 12$                      ; save to shadow copy if muted
         jp 2$                           ; else write to PSG
+15$:
+        .db PSG_CHANNEL0, PSG_CHANNEL1, PSG_CHANNEL2, PSG_CHANNEL3
 
 ; --- no latch -----------------
 7$:
@@ -183,7 +183,7 @@ void PSGFrame (void) NAKED {
 
 2$:
         ld a, b
-        out (_PSGPort), a            ; write to PSG, fall through save to shadow copy
+        out (_PSGPort), a               ; write to PSG, fall through save to shadow copy
 
 ; --- save shadow registers -----
 
@@ -255,7 +255,7 @@ void PSGFrame (void) NAKED {
         ld a, (de)                      ; load substring address (offset)
         ld c, a
         inc de
-        ld a,(de)
+        ld a, (de)
         ld b, a
         inc de
         ld (_PSGSubRetAddr), de         ; save return address
@@ -264,6 +264,5 @@ void PSGFrame (void) NAKED {
         ld d, h
         ld e, l
         jp 11$
-
     __endasm;
 }
