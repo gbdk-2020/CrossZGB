@@ -82,10 +82,10 @@ void PSGRetriggerChannels(uint8_t mask) NAKED {
 
         or a                            ; check if anything else to retrigger
         ret z                           ; return if done
-        jp  0$                          ; loop
+        jr  0$                          ; loop
 1$:
         add hl, de                      ; advance pointer to the next channel
-        jp  0$                          ; loop
+        jr  0$                          ; loop
     __endasm;
 }
 
@@ -93,24 +93,24 @@ void PSGCutChannels(uint8_t mask) NAKED {
     mask;
     __asm
         and #0b00001111
-        ret z                           ; if nothing to cut then return
-        ld b, a
-        ld c, #_PSGPort
-        ld e, #-1
-1$:
-        inc e
-        srl b
-        jr c, 2$
+        ret z                           ; if nothing to retrigger then return
+        ld c, #_PSGPort                 ; c points to the PSG port
+        ld hl, #2$                      ; hl points to the muting data
+0$:
+        srl a
+        jr nc, 1$
+        outi
+
+        or a
         ret z
-        jr 1$
+        jr 0$
+1$:
+        inc hl
+        jr 0$
 2$:
-        ld a, e
-        .rept 3
-            rrca
+        .irp ch,0,1,2,3
+            .db #(PSGLatch | (ch << 5) | PSGVolumeData | 0x0f)
         .endm
-        or #(PSGLatch | PSGVolumeData | 0x0f)
-        out (c), a
-        jr 1$
     __endasm;
 }
 
