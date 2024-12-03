@@ -23,11 +23,11 @@
 
 static SFR AT(0x7F) PSGPort;
 
-uint8_t PSGStatus = 0;                  // playback status
-uint8_t PSGMuteMask = 0;                // channel mute mask
+uint8_t PSGStatus = PSG_STOPPED;        // playback status
+uint8_t PSGMuteMask = PSG_MUTE_NONE;    // channel mute mask
 uint8_t PSGLoopFlag;                    // the tune should loop or not (flag)
 
-static void *PSGStart;                  // the pointer to the beginning of music
+void *PSGStart;                         // the pointer to the beginning of music
 static void *PSGPointer;                // the pointer to the current
 static void *PSGLoopPoint;              // the pointer to the loop begin
 static uint8_t PSGSkipFrames;           // the frames we need to skip
@@ -47,6 +47,8 @@ static uint8_t PSGSubLen;               // length of the substring we are playin
 static void *PSGSubRetAddr = 0;         // return to this address when substring is over
 
 void PSGPlay (void *song, uint8_t loop) {
+    PSGStatus = PSG_STOPPED;            // prevent running PSGFrame
+
     PSGLoopFlag = loop;
     PSGStart = song;                    // store the beginning point of music
     PSGPointer = song;                  // set music pointer to the beginning
@@ -55,12 +57,13 @@ void PSGPlay (void *song, uint8_t loop) {
     PSGSkipFrames = 0;                  // reset the skip frames
     PSGSubLen = 0;                      // reset the substring len (for compression)
     PSGLastChannel = 0;                 // latch channel 0
-    PSGStatus = PSG_PLAYING;
 
     PSGShadow[PSGChannel0 >> 5].volume = PSGLatch | PSGChannel0 | PSGVolumeData | 0x0f;
     PSGShadow[PSGChannel1 >> 5].volume = PSGLatch | PSGChannel1 | PSGVolumeData | 0x0f;
     PSGShadow[PSGChannel2 >> 5].volume = PSGLatch | PSGChannel2 | PSGVolumeData | 0x0f;
     PSGShadow[PSGChannel3 >> 5].volume = PSGLatch | PSGChannel3 | PSGVolumeData | 0x0f;
+
+    PSGStatus = PSG_PLAYING;            // start playback
 }
 
 void PSGRetriggerChannels(uint8_t mask) NAKED {
@@ -106,8 +109,8 @@ void PSGCutChannels(uint8_t mask) NAKED {
         inc hl
         jr 0$
 2$:
-        .irp ch,0,1,2,3
-            .db #(PSGLatch | (ch << 5) | PSGVolumeData | 0x0f)
+        .irp ch,PSGChannel0,PSGChannel1,PSGChannel2,PSGChannel3
+            .db #(PSGLatch | ch | PSGVolumeData | 0x0f)
         .endm
     __endasm;
 }
