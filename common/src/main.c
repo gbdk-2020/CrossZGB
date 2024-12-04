@@ -79,8 +79,6 @@ void SetWindowPos(UINT8 x, UINT8 y, UINT8 h) {
 #endif
 
 void main(void) {
-	static UINT8 __save;
-
 #if defined(NINTENDO)
 	// this delay is required for PAL SNES SGB border commands to work
 	for (UINT8 i = 4; i != 0; i--) wait_vbl_done();
@@ -99,12 +97,10 @@ void main(void) {
 
 	InitOAMs();
 
-	__save = CURRENT_BANK;
 	INIT_MUSIC;
 
 	InitStates();
 	InitSprites();
-	SWITCH_ROM(__save);
 
 	CRITICAL {
 #if defined(NINTENDO)
@@ -150,12 +146,11 @@ void main(void) {
 
 	DISPLAY_OFF;
 	while(1) {
-
-		if (stop_music_on_new_state) {
+		if (stop_music_on_new_state) 
 			StopMusic;
-		}
 
 		SpriteManagerReset();
+
 		state_running = 1;
 		current_state = next_state;
 		scroll_target = 0;
@@ -169,34 +164,35 @@ void main(void) {
 		OBP1_REG = DMG_PALETTE(DMG_WHITE, DMG_WHITE, DMG_DARK_GRAY, DMG_BLACK);
 #endif
 
-		__save = CURRENT_BANK;
-		SWITCH_ROM(stateBanks[current_state]);
-		(startFuncs[current_state])();
-		SWITCH_ROM(__save);
+		SWITCH_ROM(stateBanks[current_state]);		// switch to the current state bank and stay
+
+		startFuncs[current_state]();			// initialize current state
 
 		scroll_x_vblank = scroll_x, scroll_y_vblank = scroll_y;
 
-		if (state_running) {
+		if (state_running) {				// initialization function may change state immediately
 			FadeOut();
+
+			Void_Func_Void current_update = updateFuncs[current_state];
+
+			while (state_running) {
+				if (!vbl_count)
+					wait_vbl_done();
+
+				delta_time = (vbl_count < 2u) ? 0u : 1u;
+				vbl_count = 0;
+
+				UPDATE_KEYS();
+
+				SpriteManagerUpdate();
+
+				current_update();		// update current state
+			}
+
+			FadeIn();
 		}
 
-		while (state_running) {
-			if(!vbl_count)
-				wait_vbl_done();
-			delta_time = (vbl_count < 2u) ? 0u : 1u;
-			vbl_count = 0;
-
-			UPDATE_KEYS();
-
-			SpriteManagerUpdate();
-
-			__save = CURRENT_BANK;
-			SWITCH_ROM(stateBanks[current_state]);
-			updateFuncs[current_state]();
-			SWITCH_ROM(__save);
-		}
-
-		FadeIn();
+		destroyFuncs[current_state]();			// destroy current state
 	}
 }
 
