@@ -331,8 +331,9 @@ $(OBJDIR_RES)/%.fur.c: ../res/music/$(EXT)/%.fur
 	@$(JSON2SMS) -a LIT -b 255 -i $(basename $(basename $(notdir $<)))_fur -o $@ $(basename $@).json > /dev/null
 
 $(OBJDIR_RES)/%.vgm.o: ../res/music/$(EXT)/%.vgm
-	@$(VGM2PSG) $< $(basename $@).psg
-	@$(PSGCOMP) $(basename $@).psg $(basename $@).psg
+	@echo compiling resource $<
+	@$(VGM2PSG) $< $(basename $@).psg > /dev/null
+	@$(PSGCOMP) $(basename $@).psg $(basename $@).psg > /dev/null
 	@$(BIN2OBJ) -b 255 -i $(basename $(basename $(notdir $<)))_psg -o $@ $(basename $@).psg
 
 $(OBJDIR_RES)/%.o: $(OBJDIR_RES)/%.c
