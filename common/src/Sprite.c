@@ -68,18 +68,9 @@ void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
 extern UINT8 delta_time;
 extern UINT8 next_oam_idx;
 void DrawSprite(void) {
-	// check sprite for removal
-	static INT16 screen_x;
+	static INT16 screen_x, screen_y;
 	screen_x = THIS->x - scroll_x;
-
-	if ((screen_x + THIS->coll_w + THIS->lim_x) < 0) return SpriteManagerRemoveSprite(THIS);
-	if ((DEVICE_SCREEN_PX_WIDTH + THIS->lim_x) < screen_x) return SpriteManagerRemoveSprite(THIS);
-
-	static INT16 screen_y;
 	screen_y = THIS->y - scroll_y;
-
-	if ((screen_y + THIS->coll_h + THIS->lim_y) < 0) return SpriteManagerRemoveSprite(THIS);
-	if ((DEVICE_SCREEN_PX_HEIGHT + THIS->lim_y) < screen_y) return SpriteManagerRemoveSprite(THIS);
 
 	// tick sprite animation
 	if (THIS->anim_data) {	
@@ -87,8 +78,7 @@ void DrawSprite(void) {
 		if (THIS->anim_accum_ticks > 100u) {
 			THIS->anim_accum_ticks -= 100u;
 
-			THIS->anim_frame ++;
-			if (THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
+			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
 				THIS->anim_frame = 0;
 			}
  
@@ -100,23 +90,35 @@ void DrawSprite(void) {
 		}
 	}
 
-	// check visibility		
-	if (!THIS->visible) return;
+	if (
+		((UINT16)(screen_x + 32u) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + 32u)) &&
+		((UINT16)(screen_y + 32u) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + 32u)) &&
+		(THIS->visible)
+	) {
+		// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
+		screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
+		screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
 
-	// render sprite on screen
-	screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
-	screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
-
-	UINT8 __save = CURRENT_BANK;
-	SWITCH_ROM(THIS->mt_sprite_bank);
-		switch(THIS->mirror)
-		{
-			case NO_MIRROR: next_oam_idx += move_metasprite_ex    (THIS->mt_sprite, THIS->first_tile,    THIS->attr_add, next_oam_idx, screen_x,                screen_y               ); break;
-			case H_MIRROR:  next_oam_idx += move_metasprite_flipy (THIS->mt_sprite, THIS->first_tile_H,  THIS->attr_add, next_oam_idx, screen_x,                screen_y + THIS->coll_h); break;
-			case V_MIRROR:  next_oam_idx += move_metasprite_flipx (THIS->mt_sprite, THIS->first_tile_V,  THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y               ); break;
-			case HV_MIRROR: next_oam_idx += move_metasprite_flipxy(THIS->mt_sprite, THIS->first_tile_HV, THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y + THIS->coll_h); break;
+		// render sprite on screen
+		UINT8 __save = CURRENT_BANK;
+		SWITCH_ROM(THIS->mt_sprite_bank);
+			switch(THIS->mirror) {
+				case NO_MIRROR: next_oam_idx += move_metasprite_ex    (THIS->mt_sprite, THIS->first_tile,    THIS->attr_add, next_oam_idx, screen_x,                screen_y               ); break;
+				case H_MIRROR:  next_oam_idx += move_metasprite_flipy (THIS->mt_sprite, THIS->first_tile_H,  THIS->attr_add, next_oam_idx, screen_x,                screen_y + THIS->coll_h); break;
+				case V_MIRROR:  next_oam_idx += move_metasprite_flipx (THIS->mt_sprite, THIS->first_tile_V,  THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y               ); break;
+				case HV_MIRROR: next_oam_idx += move_metasprite_flipxy(THIS->mt_sprite, THIS->first_tile_HV, THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y + THIS->coll_h); break;
+			}
+		SWITCH_ROM(__save);
+	} else {
+		// check sprite for removal 
+		if (
+			((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + 16u))) || 
+			((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + 16u)))
+		) {
+			return SpriteManagerRemoveSprite(THIS);
 		}
-	SWITCH_ROM(__save);
+	}
+
 }
 
 unsigned char* tile_coll;
