@@ -2,6 +2,7 @@
 
 #include "main.h"
 
+#include "Vector.h"
 #include "SpriteManager.h"
 #include "Scroll.h"
 #include "ZGBMain.h"

@@ -3,7 +3,7 @@
 
 #include <gbdk/platform.h>
 
-#include "vector.h"
+#include "Vector.h"
 #include "OAMManager.h"
 #include "MetaSpriteInfo.h"
 #include "Flip.h"

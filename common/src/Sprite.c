@@ -1,6 +1,6 @@
 #include "main.h"
 
-#include "vector.h"
+#include "Vector.h"
 #include "Sprite.h"
 #include "Scroll.h"
 #include "SpriteManager.h"
