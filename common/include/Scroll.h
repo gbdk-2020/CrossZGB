@@ -73,9 +73,17 @@ extern UINT8 last_tile_loaded;
 
 extern UINT16 hud_map_offset;
 
-#define InitScrollTiles(FIRST_TILE, TILE_DATA) 
 UINT16 ScrollSetTiles(UINT8 first_tile, UINT8 tile_data_bank, const struct TilesInfo* tile_data);
+#define LOAD_TILES(TILES) ScrollSetTiles(last_tile_loaded, BANK((TILES)), &(TILES))
+
 void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map);
+
+void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapInfo* map);
+#define InitScrollTiles(FIRST_TILE, TILE_MAP) ScrollInitTilesFromMap((FIRST_TILE), BANK((TILE_MAP)), &(TILE_MAP))
+
+void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down);
+void ScrollScreenRedraw(void);
+
 void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_list, const UINT8* coll_list_down);
 
 UINT16 LoadMap(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT8 map_bank, struct MapInfo* map);

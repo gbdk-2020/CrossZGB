@@ -1,0 +1,52 @@
+name: Build project
+
+on:
+# uncomment lines below to (re)build on each push
+#  push:
+#    branches:
+#      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install build dependencies
+      run: sudo apt-get update && sudo apt-get install -y build-essential
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pillow wave
+
+    - name: Download ZGB-Linux-x64
+      run: wget https://github.com/gbdk-2020/CrossZGB/releases/latest/download/ZGB-Linux-x64.tar.gz
+
+    - name: Unpack ZGB-Linux-x64
+      run: |
+        tar -xzf ZGB-Linux-x64.tar.gz
+        echo "GBDK_HOME=$(pwd)/CrossZGB/gbdk" >> $GITHUB_ENV
+        echo "ZGB_PATH=$(pwd)/CrossZGB/ZGB/common" >> $GITHUB_ENV
+
+    - name: Build project
+      run: |
+        cd src
+        make
+      env:
+        GBDK_HOME: ${{ env.GBDK_HOME }}
+        ZGB_PATH: ${{ env.ZGB_PATH }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ROM-files
+        path: bin/

@@ -40,7 +40,7 @@
 UINT8 scroll_top_movement_limit = TOP_MOVEMENT_LIMIT;
 UINT8 scroll_bottom_movement_limit = BOTTOM_MOVEMENT_LIMIT;
 
-//To be defined on the main app
+// To be defined on the main app
 UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile);
 
 unsigned char* scroll_map = 0;
@@ -76,7 +76,7 @@ UINT8 last_tile_loaded = 0;
 
 UINT16 hud_map_offset;
 
-//Keeping track of the current tiles loaded on offset 0
+// Keeping track of the current tiles loaded on offset 0
 UINT8 tiles_bank_0;
 const struct TilesInfo* tiles_0;
 
@@ -205,7 +205,7 @@ UINT16 LoadMap(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT8 map_bank, struct MapInfo
 
 	//Load Tiles
 	UINT16 map_offset;
-	UINT8 load_tiles = (tiles_bank_0 != map->tiles_bank) || (tiles_0 != map->tiles); //If the tile set is the same as the one used for the scroll or the bg (which is stored in tiles_bank_0 and tiles0) then do not load the tiles again
+	UINT8 load_tiles = (tiles_bank_0 != map->tiles_bank) || (tiles_0 != map->tiles); // If the tile set is the same as the one used for the scroll or the bg (which is stored in tiles_bank_0 and tiles0) then do not load the tiles again
 	if (load_tiles) {
 		if (map->extra_tiles) {
 			map_offset = ScrollSetTiles(last_tile_loaded, map->extra_tiles_bank, map->extra_tiles);
@@ -217,22 +217,22 @@ UINT16 LoadMap(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT8 map_bank, struct MapInfo
 		map_offset = 0;
 	}
 
-	//Load map (tile by tile because it there are not attributes when need to pick them from scroll_tile_info)
+	// Load map (tile by tile because it there are not attributes when need to pick them from scroll_tile_info)
 	UINT8* data = map->data;
 	UINT8* attrs = map->attributes;
-	for(UINT8 j = 0; j < map->height; ++j) {
-		for(UINT8 i = 0; i < map->width; ++i) {
+	for (UINT8 j = 0; j < map->height; ++j) {
+		for (UINT8 i = 0; i < map->width; ++i) {
 			UpdateMapTile(bg_or_win, x + i, y + j, map_offset, *data, attrs);
 
 			++data;
-			if(attrs)
+			if (attrs)
 				++attrs;
 		}
 	}
 
 	SWITCH_ROM(__save);
 
-	//Return the offset so the user can pass it as parameter to UpdateMapTile
+	// Return the offset so the user can pass it as parameter to UpdateMapTile
 	return map_offset;
 }
 
@@ -269,43 +269,55 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map) {
 	SWITCH_ROM(__save);
 }
 
-void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_list, const UINT8* coll_list_down) {
-	UINT8 i, __save = CURRENT_BANK;
-
-	// Init Tiles
+void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapInfo* map) {
+	last_tile_loaded = first_tile;
+	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(map_bank);
 		if (map->tiles) ScrollSetTiles(0, map->tiles_bank, map->tiles);
 		if (map->extra_tiles) ScrollSetTiles(last_tile_loaded, map->extra_tiles_bank, map->extra_tiles);
 	SWITCH_ROM(__save);
+}
 
-	// Init Map
-	ScrollSetMap(map_bank, map);
-
-	// Init Collisions
+void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
 	memset(scroll_collisions, 0, sizeof(scroll_collisions));
 	memset(scroll_collisions_down, 0, sizeof(scroll_collisions_down));
 
 	if(coll_list) {
-		for(i = 0u; coll_list[i] != 0u; ++i) {
+		for(UINT8 i = 0u; coll_list[i] != 0u; ++i) {
 			scroll_collisions[coll_list[i]] = 1u;
 			scroll_collisions_down[coll_list[i]] = 1u;
 		}
 	}
 	if(coll_list_down) {
-		for(i = 0u; coll_list_down[i] != 0u; ++i) {
+		for(UINT8 i = 0u; coll_list_down[i] != 0u; ++i) {
 			scroll_collisions_down[coll_list_down[i]] = 1u;
 		}
 	}
+}
 
-	// Redraw screen
-	SWITCH_ROM(map_bank);
+void ScrollScreenRedraw(void) {
+	UINT8 __save = CURRENT_BANK;
+	SWITCH_ROM(scroll_bank);
 		INT16 y = scroll_y >> 3;
-		for(i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
+		for(UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
 			ScrollUpdateRow((scroll_x >> 3) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
 		}
 	SWITCH_ROM(__save);
 }
 
+void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_list, const UINT8* coll_list_down) {
+	// Init Tiles
+	ScrollInitTilesFromMap(0, map_bank, map);
+
+	// Init Map
+	ScrollSetMap(map_bank, map);
+
+	// Init Collisions
+	ScrollInitCollisions(coll_list, coll_list_down);
+
+	// Redraw screen
+	ScrollScreenRedraw();
+}
 
 void ScrollUpdateRowR(void) {
 	for(UINT8 i = 0u; i != SCREEN_RESTORE_W && pending_w_i != 0; ++i, --pending_w_i)  {

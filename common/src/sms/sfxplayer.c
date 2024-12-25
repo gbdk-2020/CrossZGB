@@ -77,23 +77,25 @@ void sfx_sound_cut_mask(uint8_t mask) NAKED {
 #if defined(__SDCC)
 #if defined(SEGA)
     __asm
-        ld c, #<_PSG
-        ld b, a
-        ld e, #-1
-1$:
-        inc e
-        srl b
-        jr c, 2$
+        and #0b00001111
+        ret z                       ; if nothing to retrigger then return
+        ld c, #<_PSG                ; c points to the PSG port
+        ld hl, #2$                  ; hl points to the muting data
+0$:
+        srl a
+        jr nc, 1$
+        outi
+
+        or a
         ret z
-        jr 1$
+        jr 0$
+1$:
+        inc hl
+        jr 0$
 2$:
-        ld a, e
-        .rept 3
-            rrca
+        .irp ch,0,1,2,3
+            .db #(PSG_LATCH | (ch << 5) | PSG_VOLUME | 0x0f)
         .endm
-        or #(PSG_LATCH | PSG_VOLUME | 0x0f)
-        out (c), a
-        jr 1$
     __endasm;
 #else
 __asm

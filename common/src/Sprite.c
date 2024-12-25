@@ -1,6 +1,6 @@
 #include "main.h"
 
-#include "vector.h"
+#include "Vector.h"
 #include "Sprite.h"
 #include "Scroll.h"
 #include "SpriteManager.h"
@@ -65,55 +65,61 @@ void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
 	}
 }
 
-#define SCREENWIDTH_PLUS_32  (DEVICE_SCREEN_PX_WIDTH + 32)
-#define SCREENHEIGHT_PLUS_32 (DEVICE_SCREEN_PX_HEIGHT + 32)
 extern UINT8 delta_time;
 extern UINT8 next_oam_idx;
 void DrawSprite(void) {
-	UINT16 screen_x;
-	UINT16 screen_y;
+	static INT16 screen_x, screen_y;
+	screen_x = THIS->x - scroll_x;
+	screen_y = THIS->y - scroll_y;
 
+	// tick sprite animation
 	if (THIS->anim_data) {	
 		THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
-		if(THIS->anim_accum_ticks > (UINT8)100u) {
-			THIS->anim_frame ++;
-			if(THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)){
+		if (THIS->anim_accum_ticks > 100u) {
+			THIS->anim_accum_ticks -= 100u;
+
+			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
 				THIS->anim_frame = 0;
 			}
-
-			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); //Do this before changing banks, anim_data is stored on current bank
+ 
+			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); // Do this before changing banks, anim_data is stored on current bank
 			UINT8 __save = CURRENT_BANK;
 			SWITCH_ROM(THIS->mt_sprite_bank);
 				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
 			SWITCH_ROM(__save);
-			THIS->anim_accum_ticks -= 100u;
 		}
 	}
 
-	screen_x = THIS->x - scroll_x;
-	screen_y = THIS->y - scroll_y;
-	//It might sound stupid adding 32 in both sides but remember the values are unsigned! (and maybe truncated after substracting scroll_)
-	if (((screen_x + 32u) < SCREENWIDTH_PLUS_32) && ((screen_y + 32) < SCREENHEIGHT_PLUS_32) && (THIS->visible)) {
+	if (
+		((UINT16)(screen_x + 32u) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + 32u)) &&
+		((UINT16)(screen_y + 32u) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + 32u)) &&
+		(THIS->visible)
+	) {
+		// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
 		screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
 		screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
+
+		// render sprite on screen
 		UINT8 __save = CURRENT_BANK;
 		SWITCH_ROM(THIS->mt_sprite_bank);
-			switch(THIS->mirror)
-			{
+			switch(THIS->mirror) {
 				case NO_MIRROR: next_oam_idx += move_metasprite_ex    (THIS->mt_sprite, THIS->first_tile,    THIS->attr_add, next_oam_idx, screen_x,                screen_y               ); break;
 				case H_MIRROR:  next_oam_idx += move_metasprite_flipy (THIS->mt_sprite, THIS->first_tile_H,  THIS->attr_add, next_oam_idx, screen_x,                screen_y + THIS->coll_h); break;
 				case V_MIRROR:  next_oam_idx += move_metasprite_flipx (THIS->mt_sprite, THIS->first_tile_V,  THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y               ); break;
+				case (H_MIRROR | V_MIRROR):
 				case HV_MIRROR: next_oam_idx += move_metasprite_flipxy(THIS->mt_sprite, THIS->first_tile_HV, THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y + THIS->coll_h); break;
 			}
 		SWITCH_ROM(__save);
-
 	} else {
-		if((screen_x + THIS->lim_x + 16) > ((THIS->lim_x << 1) + 16 + SCREENWIDTH) ||
-				(screen_y + THIS->lim_y + 16) > ((THIS->lim_y << 1) + 16 + SCREENHEIGHT)
+		// check sprite for removal 
+		if (
+			((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + 16u))) || 
+			((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + 16u)))
 		) {
-			SpriteManagerRemove(THIS_IDX);
+			return SpriteManagerRemoveSprite(THIS);
 		}
 	}
+
 }
 
 unsigned char* tile_coll;
@@ -124,8 +130,8 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 	UINT8 start_tile_y, end_tile_y;
 	UINT8* scroll_coll_v;
 	UINT8 tmp;
-	if(x) {
-		if(x > 0) {
+	if (x) {
+		if (x > 0) {
 			pivot_x = sprite->x + (UINT8)(sprite->coll_w - 1u);
 		} else {
 			pivot_x = sprite->x;
@@ -189,8 +195,8 @@ inc_x:
 	sprite->x += x;
 done_x:
 	
-	if(y) {
-		if(y > 0) {
+	if (y) {
+		if (y > 0) {
 			pivot_y = sprite->y + (UINT8)(sprite->coll_h - 1u);
 		} else {
 			pivot_y = sprite->y;
@@ -259,29 +265,9 @@ done_y:
 }
 
 UINT8 CheckCollision(Sprite* sprite1, Sprite* sprite2) {
-	INT16 diff16; 
-	INT8 diff;
-	
-	diff16 = sprite1->x - sprite2->x;
-	if((UINT16)(diff16 + 32) > 64) //diff16 > 32 || diff16 < -32
-		return 0;
-
-	diff = (INT8)diff16;
-
-	diff16 = sprite1->y - sprite2->y;
-	if((UINT16)(diff16 + 32) > 64)
-		return 0;
-
-	if( (diff + sprite1->coll_w) < 0 ||
-	    (sprite2->coll_w - diff) < 0) {
-		return 0;
-	}
-
-	diff = (INT8)diff16; 
-	if( (diff + sprite1->coll_h) < 0 ||
-			(sprite2->coll_h - diff) < 0) {
-		return 0;
-	}
-		
+	if ((sprite1->x + sprite1->coll_w) < sprite2->x) return 0;
+	if ((sprite2->x + sprite2->coll_w) < sprite1->x) return 0;
+	if ((sprite1->y + sprite1->coll_h) < sprite2->y) return 0;
+	if ((sprite2->y + sprite2->coll_h) < sprite1->y) return 0;
 	return 1;
 }

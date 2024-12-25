@@ -76,10 +76,16 @@ CrossZGB will automatically turn all your assets files into C data:
 - **Graphics**
   - .gbr from Game Boy Tile Designer
   - .gbm from Game Boy Map Builder
-  - .png can be used for backgrounds or sprites
+  - .png can be used for backgrounds, sprites or fonts
 - **Musics**
-  - .mod for gbt-player
-  - .uge for hUGETracker
+  - .mod for gbt-player (game boy, mega duck)
+  - .uge for hUGETracker (game boy, mega duck)
+  - .fur for Furnace tracker (master system, game gear)
+  - .vgm for psglib (master system, game gear)
+- **SFX**
+  - .vgm for the game boy sound chip (game boy, mega duck)
+  - .vgm for the SN7 sound chip (master system, game gear)
+  - .sav for FXHammer (game boy, mega duck)
 
 In order to use any of these resources in your code you need to declare them first using
 ```C

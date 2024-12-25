@@ -2,6 +2,7 @@
 
 #include "main.h"
 
+#include "Vector.h"
 #include "SpriteManager.h"
 #include "Scroll.h"
 #include "ZGBMain.h"
@@ -12,6 +13,13 @@
 	#define LAST_SPRITE_IDX 128
 #elif defined(SEGA)
 	#define LAST_SPRITE_IDX 255
+#endif
+
+#ifndef SPRITE_LIMIT_X
+	#define SPRITE_LIMIT_X 32
+#endif
+#ifndef SPRITE_LIMIT_Y
+	#define SPRITE_LIMIT_Y 32
 #endif
 
 //Pool
@@ -52,10 +60,10 @@ void SpriteManagerReset(void) {
 	}
 	ClearOAMs();
 
-	memset(spriteIdxs, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsH, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsV, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsHV, LAST_SPRITE_IDX, N_SPRITE_TYPES);
+	memset(spriteIdxs, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsH, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsHV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);
@@ -168,8 +176,8 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	sprite = sprite_manager_sprites[sprite_idx];
 	sprite->type = sprite_type;
 	sprite->marked_for_removal = 0;
-	sprite->lim_x = 32u;
-	sprite->lim_y = 32u;
+	sprite->lim_x = SPRITE_LIMIT_X;
+	sprite->lim_y = SPRITE_LIMIT_Y;
 	sprite->mirror = NO_MIRROR;
 
 	VectorAdd(sprite_manager_updatables, sprite_idx);
@@ -222,8 +230,6 @@ void SpriteManagerFlushRemove(void) {
 	sprite_manager_removal_check = 0;
 	SWITCH_ROM(__save);
 }
-
-void DrawSprite(void); // declared in Sprite.c
 
 UINT8 enable_flickering = 1;
 UINT8 THIS_IDX = 0;
