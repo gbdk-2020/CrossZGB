@@ -31,24 +31,24 @@ void InitStates(void) BANKED {
 SPRITES
 #undef _SPRITE_
 
-UINT8 spriteBanks[N_SPRITE_TYPES];
-UINT8 spriteDataBanks[N_SPRITE_TYPES];
+UINT8 spriteBanks[SPRITES_ARRAY_LEN];
+UINT8 spriteDataBanks[SPRITES_ARRAY_LEN];
 
-Void_Func_Void spriteStartFuncs[N_SPRITE_TYPES];
-Void_Func_Void spriteUpdateFuncs[N_SPRITE_TYPES];
-Void_Func_Void spriteDestroyFuncs[N_SPRITE_TYPES];
+Void_Func_Void spriteStartFuncs[SPRITES_ARRAY_LEN];
+Void_Func_Void spriteUpdateFuncs[SPRITES_ARRAY_LEN];
+Void_Func_Void spriteDestroyFuncs[SPRITES_ARRAY_LEN];
 
 #define _SPRITE_(SPRITE_ID, DATA, FLIP) extern const void __bank_##DATA; extern const struct MetaSpriteInfo DATA;
 	SPRITES
 #undef _SPRITE_
 
-const struct MetaSpriteInfo* spriteDatas[N_SPRITE_TYPES];
-UINT8 spriteIdxs[N_SPRITE_TYPES];
-UINT8 spriteIdxsH[N_SPRITE_TYPES];
-UINT8 spriteIdxsV[N_SPRITE_TYPES];
-UINT8 spriteIdxsHV[N_SPRITE_TYPES];
-UINT8 spriteFlips[N_SPRITE_TYPES];
-UINT8 spritePalsOffset[N_SPRITE_TYPES];
+const struct MetaSpriteInfo* spriteDatas[SPRITES_ARRAY_LEN];
+UINT8 spriteIdxs[SPRITES_ARRAY_LEN];
+UINT8 spriteIdxsH[SPRITES_ARRAY_LEN];
+UINT8 spriteIdxsV[SPRITES_ARRAY_LEN];
+UINT8 spriteIdxsHV[SPRITES_ARRAY_LEN];
+UINT8 spriteFlips[SPRITES_ARRAY_LEN];
+UINT8 spritePalsOffset[SPRITES_ARRAY_LEN];
 
 #define _SPRITE_(SPRITE_ID, DATA, FLIP) \
 	spriteBanks[SPRITE_ID] = BANK(SPRITE_ID); \

@@ -60,10 +60,10 @@ void SpriteManagerReset(void) {
 	}
 	ClearOAMs();
 
-	memset(spriteIdxs, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsH, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsV, LAST_SPRITE_IDX, N_SPRITE_TYPES);
-	memset(spriteIdxsHV, LAST_SPRITE_IDX, N_SPRITE_TYPES);
+	memset(spriteIdxs, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsH, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsHV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);

@@ -29,3 +29,5 @@ typedef enum {
 	N_SPRITE_TYPES
 } SPRITE_TYPE;
 #undef _SPRITE_
+
+#define SPRITES_ARRAY_LEN ((N_SPRITE_TYPES)?N_SPRITE_TYPES:1)
