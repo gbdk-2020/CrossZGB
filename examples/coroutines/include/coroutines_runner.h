@@ -22,7 +22,7 @@ void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data);
 
 // process coroutine
 inline bool coro_runner_process(void * ctx) {
-    return coro_continue(&((coro_runner_context_t *)ctx)->coro_context);
+	return coro_continue(&((coro_runner_context_t *)ctx)->coro_context);
 }
 
 // free coroutine context
