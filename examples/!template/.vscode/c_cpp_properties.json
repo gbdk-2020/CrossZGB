@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${env:ZGB_PATH}/include",
+                "${env:ZGB_PATH}/../../gbdk/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__PORT_gbz80",
+                "__TARGET_gb"
+            ],
+            "windowsSdkVersion": "8.1",
+            "compilerPath": "${env:ZGB_PATH}/../../gbdk/bin/lcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "${default}",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

@@ -277,3 +277,4 @@ tools/*/*.o
 tools/*/*/*.o
 tools/*/test
 
+!examples/*/.vscode

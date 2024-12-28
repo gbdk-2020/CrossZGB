@@ -21,7 +21,7 @@ It uses [GBDK 2020](https://github.com/gbdk-2020/gbdk-2020/releases/latest) but 
 - Creating a new project
   - Take the CrossZGB-template from the CrossZGB examples subfolder and build it by running `build.bat` or `make` from the `template/src` folder
   - Follow the tutorial on the [wiki](https://github.com/gbdk-2020/CrossZGB/wiki) to understand the basic concepts of the engine
-- (**Optional**) Download [***Microsoft Visual Studio Community Edition***](https://www.visualstudio.com/downloads/) or the [***Microsoft Visual Studio Code***](https://code.visualstudio.com/download/)
+- (**Optional**) Download [***Microsoft Visual Studio Community Edition***](https://www.visualstudio.com/downloads/) or [***Microsoft Visual Studio Code***](https://code.visualstudio.com/download/) and follow [the VSCode setup guide in the template readme](examples/!template/README.md).
 
 ## Examples
 See the included basic [example projects](/examples) as well as the [Made with CrossZGB](https://github.com/gbdk-2020/CrossZGB/wiki/Made-with-CrossZGB) Wiki page for source code and demonstrations of how to target multiple platforms and use other features of the engine.
