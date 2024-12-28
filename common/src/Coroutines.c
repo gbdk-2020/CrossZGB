@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "coroutines.h"
+#include "Coroutines.h"
 
 uint16_t * coro_main_context;
 coro_context_t * coro_current_context = NULL;
@@ -126,7 +126,7 @@ bool coro_finalize(void) NONBANKED NAKED {
 }
 
 void coro_init(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data) NONBANKED {
-	uint16_t * stack = context->stack + ((MAX_CORO_STACK_SIZE >> 1) - 1);
+	uint16_t * stack = context->stack + ((CORO_STACK_SIZE >> 1) - 1);
 	*stack = (uint16_t)user_data;
 #if defined(__TARGET_gb) || defined(__TARGET_ap) || defined(__TARGET_duck)
 	stack = (uint16_t *)((uint8_t *)stack - 6); // match SM83 banked call convention

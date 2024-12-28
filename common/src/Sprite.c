@@ -43,6 +43,8 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	sprite->anim_speed = 33u;
 
+	sprite->ctx = NULL;
+
 	sprite->x = 0;
 	sprite->y = 0;
 

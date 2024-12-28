@@ -38,6 +38,9 @@ typedef struct {
 	// Flags, currently used for mirroring
 	MirroMode mirror;
 
+	// For the coroutine runner
+	void * ctx;			// pointer to the coroutine context if coroutines are used
+
 	// For the sprite manager
 	INT16 lim_x, lim_y;             // limits offscren where the sprite will be deleted (0 means immediatelly)
 	UINT8 type;                     // sprite type (enemy, bullet, etc.)
