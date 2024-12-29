@@ -34,7 +34,9 @@ void coro_runner_free(void * ctx) {
 static void __initializer__(void) NONBANKED NAKED {
 	__asm
 #if defined(__TARGET_gb) || defined(__TARGET_ap) || defined(__TARGET_duck) || defined(__TARGET_sms) || defined(__TARGET_gg)
-		; we inject initialization call so no need to call coro_runner_init explicitly
+		; we inject the call to the coro_runner_init() in the _GSINIT section, 
+		; so there will be no need to call it explicitly in the game code
+
 		.AREA _GSINIT
 
 		call _coro_runner_init
