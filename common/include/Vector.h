@@ -41,6 +41,8 @@
 #define VECTOR_INS(V, POS, ELEM) (memmove(&(V[(POS) + 2]), &(V[(POS) + 1]), ((V[0]) - (POS) + 1) * sizeof(V[0])), (V[(POS) + 1] = (ELEM)), V[0]++)
 #define VECTOR_SET_DIRECT(V, POS, ELEM) ((V[(POS) + 1]) = (ELEM))
 
+#define LIST(...) {__VA_ARGS__, 0}
+
 #define DECLARE_VECTOR(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1] = {0}
 #ifndef NDEBUG
 #define PP_Q(x) #x
