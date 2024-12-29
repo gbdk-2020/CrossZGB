@@ -55,7 +55,6 @@ UINT16 scroll_tiles_w;
 UINT16 scroll_tiles_h;
 Sprite* scroll_target = 0;
 UINT8 scroll_collisions[256];
-UINT8 scroll_collisions_down[256];
 UINT8 scroll_tile_info[256];
 UINT8 scroll_bank;
 UINT8 scroll_offset_x = 0;
@@ -278,20 +277,24 @@ void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapIn
 	SWITCH_ROM(__save);
 }
 
-void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
-	memset(scroll_collisions, 0, sizeof(scroll_collisions));
-	memset(scroll_collisions_down, 0, sizeof(scroll_collisions_down));
 
+void ScrollCollisionsReset(void) {
+	memset(scroll_collisions, 0, sizeof(scroll_collisions));
+}
+
+void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list) {
+	for(const UINT8 * ptr = coll_list; (*ptr); ptr++) 
+		scroll_collisions[*ptr] |= group;
+}
+
+
+void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
+	ScrollCollisionsReset();
 	if(coll_list) {
-		for(UINT8 i = 0u; coll_list[i] != 0u; ++i) {
-			scroll_collisions[coll_list[i]] = 1u;
-			scroll_collisions_down[coll_list[i]] = 1u;
-		}
+		ScrollInitCollisionGroup((COLL_GROUP_DEFAULT | COLL_GROUP_DOWN), coll_list);
 	}
 	if(coll_list_down) {
-		for(UINT8 i = 0u; coll_list_down[i] != 0u; ++i) {
-			scroll_collisions_down[coll_list_down[i]] = 1u;
-		}
+		ScrollInitCollisionGroup(COLL_GROUP_DOWN, coll_list_down);
 	}
 }
 
