@@ -55,9 +55,9 @@ extern UINT16 scroll_w;
 extern UINT16 scroll_h;
 extern UINT16 scroll_tiles_w;
 extern UINT16 scroll_tiles_h;
-extern UINT8  scroll_collisions[256];
+extern UINT8 scroll_collisions[256];
 extern UINT8 scroll_tile_info[256];
-extern UINT8  scroll_bank;
+extern UINT8 scroll_bank;
 extern UINT8 scroll_offset_x;
 extern UINT8 scroll_offset_y;
 

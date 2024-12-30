@@ -65,8 +65,8 @@ inline bool coro_runner_process(void * ctx) {
 void coro_runner_free(void * ctx);
 
 // coroutine helper macros
-#define INIT_CORO(CORO, BANK) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, THIS->custom_data))) SpriteManagerRemoveSprite(THIS)
-#define INIT_CORO_WITH_DATA(CORO, BANK, DATA) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, DATA))) SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO(BANK, CORO) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, THIS->custom_data))) SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO_WITH_DATA(BANK, CORO, DATA) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, DATA))) SpriteManagerRemoveSprite(THIS)
 #define ITER_CORO if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS)
 #define FREE_CORO coro_runner_free(THIS->ctx)
 

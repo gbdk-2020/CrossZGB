@@ -39,7 +39,7 @@ void SpriteBulletLogic(void * custom_data) BANKED {
 
 void START(void) {
 	// allocate coroutine context
-	INIT_CORO(SpriteBulletLogic, BANK(SpriteBullet));
+	INIT_CORO(BANK(SpriteBullet), SpriteBulletLogic);
 }
 
 void UPDATE(void) {
