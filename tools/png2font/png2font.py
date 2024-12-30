@@ -99,8 +99,9 @@ def main(argv=None):
         pixels = font.load()
         
         palette = list(chunks(font.getpalette(), 3))
-        num_palettes = len(palette) // colors_per_palette
+        num_palettes = max(1, len(palette) // colors_per_palette)
         palette = palette[0 : num_palettes * colors_per_palette]
+        palette.extend([[0, 0, 0]] * ((num_palettes * colors_per_palette) - len(palette)))
         
         indexes, widths, faces = [0] * 256, [], []
         
