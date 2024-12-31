@@ -142,6 +142,14 @@ else
 	CFLAGS += -DDEFAULT_SPRITES_SIZE=8
 endif
 
+# Coroutine engine settings
+ifneq ($(CORO_STACK_SIZE), )
+	CFLAGS += -DCORO_STACK_SIZE=$(CORO_STACK_SIZE)
+endif
+ifneq ($(CORO_MAX_CONTEXTS), )
+	CFLAGS += -DCORO_MAX_CONTEXTS=$(CORO_MAX_CONTEXTS)
+endif
+
 
 # Release/Debug flags
 ifneq (,$(findstring Debug,$(BUILD_TYPE)))
@@ -151,12 +159,12 @@ ifneq (,$(findstring Debug,$(BUILD_TYPE)))
 else
 	CFLAGS += -Wf'--max-allocs-per-node 50000' -DNDEBUG
 endif
+
 # Optional verbose output for lcc, linker and bankpack
 ifneq (,$(findstring Verbose,$(BUILD_TYPE)))
 	CFLAGS += -v
 	BINFLAGS += -Wl-p -Wb-v
 endif
-
 
 current_dir = $(shell pwd)
 

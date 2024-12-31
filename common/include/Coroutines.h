@@ -6,7 +6,6 @@
 #include <stdbool.h>
 
 #include "SpriteManager.h"
-#include "ZGBMain.h"
 
 #ifndef CORO_STACK_SIZE
 	#define CORO_STACK_SIZE 64
