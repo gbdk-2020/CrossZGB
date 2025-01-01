@@ -8,7 +8,7 @@
 #include "SpriteManager.h"
 
 #ifndef CORO_STACK_SIZE
-	#define CORO_STACK_SIZE 64
+	#define CORO_STACK_SIZE 96
 #endif
 #define ALLOW_RUN_CORO_AS_FUNCTION
 
