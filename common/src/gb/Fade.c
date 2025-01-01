@@ -30,8 +30,8 @@ void FadeDMG(UINT8 fadeout) {
 			c = &colors[j << 2];
 			*pals[j] = DMG_PALETTE(FadeInOp(c[0], p), FadeInOp(c[1], p), FadeInOp(c[2], p), FadeInOp(c[3], p));
 		}
-		wait_vbl_done();
-		wait_vbl_done();
+		vsync();
+		vsync();
 	}
 }
 
@@ -54,11 +54,11 @@ void FadeStepColor(UINT8 i) {
 		palette_s[c] = UpdateColor(i, *col_s);
 	};
 
-	wait_vbl_done();
+	vsync();
 	set_bkg_palette(0, 8, palette);
 	set_sprite_palette(0, 8, palette_s);
 	DISPLAY_ON;
-	wait_vbl_done();
+	vsync();
 }
 #endif
 

@@ -40,8 +40,8 @@ void FadeStepColor(UINT8 i) {
 	set_sprite_palette(0, 1, palette_s);
 
 	DISPLAY_ON;
-	wait_vbl_done();
-	wait_vbl_done();
+	vsync();
+	vsync();
 }
 
 void FadeIn(void) BANKED {

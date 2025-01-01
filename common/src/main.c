@@ -81,7 +81,7 @@ void SetWindowPos(UINT8 x, UINT8 y, UINT8 h) {
 void main(void) {
 #if defined(NINTENDO)
 	// this delay is required for PAL SNES SGB border commands to work
-	for (UINT8 i = 4; i != 0; i--) wait_vbl_done();
+	for (UINT8 i = 4; i != 0; i--) vsync();
 	// set global SGB detection variable
 	_is_SGB = sgb_check();
 	#ifdef CGB
@@ -177,7 +177,7 @@ void main(void) {
 
 			while (state_running) {
 				if (!vbl_count)
-					wait_vbl_done();
+					vsync();
 
 				delta_time = (vbl_count < 2u) ? 0u : 1u;
 				vbl_count = 0;
