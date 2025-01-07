@@ -21,6 +21,11 @@ inline void UPDATE_KEYS(void) {
 
 #define ANY_KEY_PRESSED (joypads.joy0)
 
+#define JOYPAD0 0
+#define JOYPAD1 1
+#define JOYPAD2 2
+#define JOYPAD3 3
+
 #define PAD_PRESSED(J,K)  (joypads.joypads[(J)] & (K))
 #define PAD_TICKED(J,K)   ((joypads.joypads[(J)] ^ old_joypads.joypads[(J)]) & joypads.joypads[(J)] & (K))
 #define PAD_RELEASED(J,K) ((joypads.joypads[(J)] ^ old_joypads.joypads[(J)]) & old_joypads.joypads[(J)] & (K))
