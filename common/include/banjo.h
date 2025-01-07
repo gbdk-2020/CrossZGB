@@ -23,69 +23,119 @@
 #define LEGATO_ON           0x0e
 #define LEGATO_OFF          0x0f
 #define GAME_GEAR_PAN       0x10
+#define AY_ENV_ON           0x11
+#define AY_ENV_OFF          0x12
+#define AY_ENV_SHAPE        0x13
+#define AY_ENV_PERIOD_HI    0x14
+#define AY_ENV_PERIOD_LO    0x15
+#define AY_CHANNEL_MIX      0x16
+#define AY_NOISE_PITCH      0x17
+#define AY_ENV_PERIOD_WORD  0x18
+#define ORDER_JUMP          0x19
+#define SET_SPEED_1         0x1a
+#define SET_SPEED_2         0x1b
+#define ORDER_NEXT          0x1c
+#define NOTE_DELAY          0x1d
 #define END_LINE            0x80
 
-#define MODE_FM             1
-#define MODE_SN             2
-#define MODE_SN_FM          3
-#define MODE_DUAL_SN        4
-#define MODE_FM_DRUMS       5
-#define MODE_SN_FM_DRUMS    7
+#define CHAN_COUNT_SN		0x4
+#define CHAN_COUNT_OPLL		0x9
+#define CHAN_COUNT_OPLL_DRUMS   0xb
+#define CHAN_COUNT_AY		0x3
 
-#define CHAN_FLAG_MUTED         0x01
+#define BANJO_HAS_SN		    0x1
+#define BANJO_HAS_OPLL		    0x2
+#define BANJO_HAS_AY		    0x4
+#define BANJO_HAS_DUAL_SN		0x8
+
+#define BANJO_LOOP_OFF          0
+#define BANJO_LOOP_ON           1
+
+#define CHAN_FLAG_MUTED     	0x01
 #define CHAN_FLAG_NOTE_ON       0x02
 #define CHAN_FLAG_LEGATO        0x04
-#define CHAN_FLAG_PITCH_CHANGE  0x08
-#define CHAN_FLAG_VOLUME_MACRO  0x10
-#define CHAN_FLAG_VIBRATO       0x20
-#define CHAN_FLAG_ARPEGGIO      0x40
-#define CHAN_FLAG_SLIDE         0x80
+#define CHAN_FLAG_VOLUME_MACRO  0x08
+#define CHAN_FLAG_VIBRATO	    0x10
+#define CHAN_FLAG_ARPEGGIO	    0x20
+#define CHAN_FLAG_SLIDE	        0x40
+#define CHAN_FLAG_EX_MACRO	    0x80
 
-// used in song/sfx table definitions
-#define SFX_DEF(SFX_LABEL, SFX_BANK, SFX_PRIORITY) { SFX_PRIORITY, SFX_BANK, &SFX_LABEL }
-#define SONG_DEF(SONG_LABEL, SONG_BANK) { 0, SONG_BANK, &SONG_LABEL }
+#define SYS_FLAG_GG             1
+#define SYS_FLAG_MARK_III       2
+#define SYS_FLAG_SYSTEM_E       4
+
+// declares enough space for x song channels and pointers to them
+#define BANJO_SONG_CHANNELS(x) \
+    channel_t song_channels[x]; \
+    channel_t *song_channel_ptrs[x]; 
+
+typedef void (*banjo_func_ptr_t)(void);
 
 typedef struct instrument_s {
 
     unsigned char volume_macro_len;
     unsigned char volume_macro_loop;
     const unsigned char * volume_macro_ptr;
+
+    unsigned char ex_macro_len;
+    unsigned char ex_macro_type;
+    unsigned char ex_macro_loop;
+    const unsigned char * ex_macro_ptr;
+
     unsigned char fm_preset;
-    unsigned char fm_patch[8];
+    const unsigned char * fm_patch;
 
 } instrument_t;
 
 typedef struct song_data_s {
+
     unsigned char magic_byte;
     unsigned char bank;
     unsigned char channel_count;
-    unsigned char loop;
+
+    unsigned char flags;
+    unsigned char master_volume;
+    unsigned char master_volume_fade;
+
+    unsigned char has_chips;
+
     unsigned char sfx_channel;
-    unsigned char has_sn;
-    unsigned char has_fm;
-    unsigned char has_fm_drums;
+    unsigned char sfx_subchannel;
+
     unsigned char time_base;
     unsigned char speed_1;
     unsigned char speed_2;
+
     unsigned char pattern_length;
     unsigned char orders_length;
+
     const instrument_t * const * instrument_pointers;
     const unsigned char * const * const * order_pointers;
+
     unsigned char subtic;
     unsigned char tic;
     unsigned char line;
     unsigned char order;
-    unsigned char process_new_line;
+
+    unsigned char order_jump;
+
     unsigned char noise_mode;
     unsigned char panning;
-    const unsigned char channel_types[32];
+
+    const banjo_func_ptr_t *channel_init_call;
+    const banjo_func_ptr_t *channel_update_call;
+    const banjo_func_ptr_t *channel_mute_calls;
+    const banjo_func_ptr_t *song_mute;
+    const banjo_func_ptr_t *song_stop;
+
 } song_data_t;
 
 typedef struct channel_s {
+
     unsigned char flags;
-    unsigned char type;
     unsigned char subchannel;
     unsigned char port;
+    unsigned char events;
 
     unsigned int freq;
     unsigned int target_freq;
@@ -96,108 +146,90 @@ typedef struct channel_s {
             
     unsigned char slide_amount;
     unsigned char slide_type;
-            
-    unsigned char vibrato_current;
-    unsigned char vibrato_target;
+    
+    unsigned char vibrato_depth;
     unsigned char vibrato_counter;
     unsigned char vibrato_counter_add;
 
     unsigned char arpeggio_pos;
     unsigned char arpeggio;
 
-    unsigned int order_table_ptr;
-    unsigned int pattern_ptr;
+    unsigned char * order_table_ptr;
+    unsigned char * pattern_ptr;
     unsigned char line_wait;
-            
+    unsigned char tic_wait;
+
     unsigned char volume_macro_len;
+    unsigned char volume_macro_vol;
     unsigned char volume_macro_pos;
     unsigned char volume_macro_loop;
-    unsigned int volume_macro_ptr;
-            
-    unsigned char fm_patch_shifted;
-    unsigned char fm_drum_trigger;
-    unsigned char fm_drum_volume_mask;
+    const unsigned char * volume_macro_ptr;
+
+    unsigned char ex_macro_type;
+    unsigned char ex_macro_len;
+    unsigned char ex_macro_val;    
+    unsigned char ex_macro_pos;
+    unsigned char ex_macro_loop;
+    const unsigned char * ex_macro_ptr;
+
+    unsigned char patch;
+    
 } channel_t;
 
-typedef struct song_s {
+extern unsigned char banjo_has_chips;
+extern unsigned char banjo_system_flags;
+extern unsigned char banjo_max_channels;
 
-    unsigned char priority;
-    unsigned char bank;
-    const song_data_t * song;
-    
-} song_t;
-
-// stores the mode after it's set in banjo_init
-extern unsigned char banjo_mode;
-
-// flags whether the FM unit is installed
-extern unsigned char banjo_fm_unit_present;
-
-// flags whether we're running on a Game Gear
-extern unsigned char banjo_game_gear_mode;
-
-// flags whether we're running on Sega System E
-extern unsigned char banjo_system_e;
-
+extern unsigned char song_playing;
 extern song_data_t song_state;
-extern channel_t song_channels[];
 
-extern song_data_t sfx_state;
-extern channel_t sfx_channel;
-
-// sets banjo_fm_unit_present to 1 if an fm unit is installed, 0 otherwise
-// sets banjo_game_gear_mode to 1 if it's detected that wer're running on a game gear in game gear mode, 0 otherwise
+// checks the hardware to see which chips are available
+// updates banjo_has_chips and banjo_system_flags
 void banjo_check_hardware(void);
 
-// initialise banjo for the given mode
-void banjo_init(unsigned char mode);
+// initialise banjo
+// sets pointers to channels, updates banjo_max_channels
+// and sets up the required chips if necessary
+void banjo_init(unsigned char channel_count, unsigned char chips);
 
-// Queues ON:
+// start playing song
+// you should change to the song's bank before calling this
+void banjo_play_song(const song_data_t *song_ptr);
 
-// handle song/sfx queues and update playing song/sfx
-// this will change the bank for slot 2 (i.e. 0x8000 to 0xbfff (writes to mapper at 0xffff))
-void banjo_update(void);
-
-// queue song/sfx to be played back starting on next banjo_update
-void banjo_queue_song(unsigned char song);
-void banjo_queue_sfx(unsigned char sfx);
-
-// set the loop mode for the song/sfx
-// by default songs loop, but sfx don't
-void banjo_queue_song_loop_mode(unsigned char loop);
-void banjo_queue_sfx_loop_mode(unsigned char loop);
-
-// set up pointers to the song and sfx tables
-void banjo_set_song_table(const song_t *song_table_ptr);
-void banjo_set_sfx_table(const song_t *sfx_table_ptr);
-
-// Queues OFF:
-
-// start playing song/sfx
-// change to the song/sfx's bank before calling this
-void banjo_play_song(const song_data_t *song_ptr, unsigned char loop_mode);
-void banjo_play_sfx(const song_data_t *song_ptr, unsigned char loop_mode);
-
-// update song/sfx if one is playing
-// change to the song/sfx's bank before calling this
+// update song if one is playing
+// change to the song's bank before calling this
 void banjo_update_song(void);
-void banjo_update_sfx(void);
 
-// Queues both ON and OFF:
-
-// stop the currently playing song/sfx
+// stop the currently playing song
+// change to the song's bank before calling this
 void banjo_song_stop(void);
-void banjo_sfx_stop(void);
 
 // resume playback of a stopped song
+// change to the song's bank before calling this
 void banjo_song_resume(void);
 
+// set song loop mode
+// 	   0 for looping off
+// 	>= 1 for looping on
+void banjo_set_song_loop_mode(unsigned char mode);
+
 // mute the given song channel
+// change to the song's bank before calling this
 void banjo_mute_song_channel(unsigned char chan);
 
 // unmute the given song channel
-// when handling your own banking and using opll fm with custom instruments
-// change to the song's bank before calling this to properly restore the custom instrument patch
+// change to the song's bank before calling this
 void banjo_unmute_song_channel(unsigned char chan);
+
+// set master volume for song playback
+// values >= 0x80 are full volume
+// lower values attenuate the volume
+void banjo_set_song_master_volume(unsigned char volume);
+
+// subtracts amount from master volume every frame
+void banjo_song_fade_out(unsigned char amount);
+
+// adds amount to master volume every frame
+void banjo_song_fade_in(unsigned char amount);
 
 #endif

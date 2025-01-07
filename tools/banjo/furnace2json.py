@@ -236,12 +236,16 @@ def main(argv=None):
     while struct.unpack("B", data[song_name_end:song_name_end+1])[0] != 0:
         song_name_end += 1
 
+    song["song_name"] = data[song_name_start:song_name_end].decode()
+
     # get song author from null terminated string
     song_author_start = song_name_end + 1
     song_author_end = song_author_start
 
     while struct.unpack("B", data[song_author_end:song_author_end+1])[0] != 0:
         song_author_end += 1
+
+    song["song_author"] = data[song_author_start:song_author_end].decode()
 
     # instrument pointers start 24 bytes after the song author
     # pointers are 32 bit uints
@@ -316,10 +320,10 @@ def main(argv=None):
 
                 pattern_row_pointer = pattern_data_pointer + (pattern_row_size * j)
 
-                pattern_row_data = struct.unpack("<hhhh", data[pattern_pointer : pattern_pointer + 8])
+                pattern_row_data = struct.unpack("<hhhh", data[pattern_data_pointer : pattern_data_pointer + 8])
 
                 line = {
-                    'note': pattern_row_data[0],
+                    'note': -1 if pattern_row_data[0] == 0 else pattern_row_data[0] % 12,
                     'octave': pattern_row_data[1],
                     'instrument': pattern_row_data[2],
                     'volume': pattern_row_data[3],
@@ -530,136 +534,64 @@ def main(argv=None):
             # add to patterns list
             song['patterns'][pattern['channel']].append(pattern)
 
+    # legacy instrument format
+    if song["format_version"] < 127:
+    
+        # load instruments
+        for i in range (0, song['instrument_count']):
 
-    # load instruments
-    for i in range (0, song['instrument_count']):
+            instrument_pointer = song['instrument_pointers'][i]
 
-        instrument_pointer = song['instrument_pointers'][i]
+            instrument_header = struct.unpack("<IIHB", data[instrument_pointer:instrument_pointer+11])
 
-        instrument_header = struct.unpack("<IIHH", data[instrument_pointer:instrument_pointer + 12])
+            # get instrument name
+            instrument_name_start = instrument_pointer + 12
+            instrument_name_end = instrument_name_start
 
-        instrument = {
-            'name': "",
-            'type': instrument_header[3],
-            'size': instrument_header[1],
-            'macros': [],
-            'features': [],
-        }
+            while struct.unpack("B", data[instrument_name_end:instrument_name_end+1])[0] != 0:
+                instrument_name_end += 1
 
-        # go through features and add them to the instrument
-        feature_pointer = instrument_pointer + 12
-
-        while (feature_pointer < instrument_pointer + instrument['size']):
-
-            feature_header = struct.unpack("<HH", data[feature_pointer:feature_pointer + 4])
-
-            feature = {
-                'code': data[feature_pointer:feature_pointer + 2].decode(),
-                'length': feature_header[1],
-                'data': [],
+            instrument = {
+                'name': data[instrument_name_start:instrument_name_end].decode(),
+                'type': instrument_header[3],
+                'size': instrument_header[1],
+                'macros': [],
+                'features': [],
             }
 
-            # move pointer past header
-            feature_pointer += 4
+            feature_pointer = instrument_name_end + 1
 
-            # Instrument name feature
-            if (feature['code'] == "NA"):
+            # **FM instrument data**
+            fm_instrument_data = struct.unpack("<BBBBBBH", data[feature_pointer:feature_pointer+8])
 
-                instrument['name'] = data[feature_pointer : feature_pointer + feature['length'] - 1].decode()
+            feature_pointer += 8
+            
+            # **FM operator data** × 4
+            fm_operator_data = [
+                struct.unpack("<" + ("B" * 32), data[feature_pointer:feature_pointer+32]),
+                struct.unpack("<" + ("B" * 32), data[feature_pointer+32:feature_pointer+64]),
+                struct.unpack("<" + ("B" * 32), data[feature_pointer+64:feature_pointer+96]),
+                struct.unpack("<" + ("B" * 32), data[feature_pointer+96:feature_pointer+128])
+            ]
 
-            # End features if we reach this code
-            elif (feature['code'] == "EN"):
+            feature_pointer += 128
 
-                break
-
-            # OPL drums
-            elif (feature['code'] == "LD"):
-
-                opll_drum_data = struct.unpack("<BHHH", data[feature_pointer:feature_pointer + 7])
-
-                instrument['opl_drums'] = {
-                    'fixed_freq': opll_drum_data[0],
-                    'kick_freq': opll_drum_data[1],
-                    'snare_hat_freq': opll_drum_data[2],
-                    'tom_top_freq': opll_drum_data[3],
-                }
-
-            # Macros
-            elif (feature['code'] == "MA"):
-
-                header_length = struct.unpack("<H", data[feature_pointer:feature_pointer + 2])[0]
-
-                macro_pointer = feature_pointer + 2
-
-                while (macro_pointer < feature_pointer + feature['length']):
-
-                    macro_data = struct.unpack("BBBBBBBB", data[macro_pointer : macro_pointer + 8])
-
-                    macro = {
-                        'code': macro_data[0],
-                        'length': macro_data[1],
-                        'loop': macro_data[2],
-                        'release': macro_data[3],
-                        'mode': macro_data[4],
-                        'word_size': macro_word_size_convert[(macro_data[5] >> 6) & 0x3],
-                        'word_struct_string': macro_word_struct_string[(macro_data[5] >> 6) & 0x3],
-                        'type': (macro_data[5] >> 1) & 0x3,
-                        'delay': macro_data[6],
-                        'speed': macro_data[7],
-                        'data': []
-                    }
-
-                    # end of macros
-                    if (macro['code'] == 255):
-
-                        break
-
-
-                    # advance pointer to macro data
-                    macro_pointer += header_length
-
-                    # get macro data
-                    for j in range(0, macro['length']):
-                        macro_data_pointer = macro_pointer + (j * macro['word_size'])
-                        macro['data'].append(
-                            struct.unpack(
-                                macro['word_struct_string'],
-                                data[macro_data_pointer : macro_data_pointer + macro['word_size']]
-                            )[0]
-                        )
-
-                    # add macro to list
-                    if (macro['code'] == 0):
-
-                        instrument['volume_macro'] = macro
-
-                    else:
-
-                        instrument['macros'].append(macro)
-
-
-                    # advance pointer
-                    macro_pointer += macro['length'] * macro['word_size']
-
-            # FM patch
-            elif (feature['code'] == "FM"):
-
-                fm_pointer = feature_pointer
-                fm_data = struct.unpack("BBBB", data[fm_pointer : fm_pointer + 4])
-
+            # opll instrument
+            if instrument["type"] == 13:
+            
                 instrument['fm'] = {
-                    'op_count': fm_data[0] & 0xf,
-                    'op_enabled': fm_data[0] >> 4,
+                    'op_count': fm_instrument_data[4],
+                    #'op_enabled': fm_data[0] >> 4,
 
-                    'feedback': fm_data[1] & 0x7,
-                    'algorithm': (fm_data[1] >> 4) & 0x7,
+                    'feedback': fm_instrument_data[1],
+                    'algorithm': fm_instrument_data[0],
 
-                    'fms': fm_data[2] & 0x7,
-                    'ams': (fm_data[2] >> 3) & 0x3,
-                    'fms2': (fm_data[2] >> 5) & 0x7,
+                    'fms': fm_instrument_data[2],
+                    'ams': fm_instrument_data[3],
+                    #'fms2': (fm_data[2] >> 5) & 0x7,
 
-                    'opll_patch': fm_data[3] & 0x1f,
-                    'am2': (fm_data[3] >> 6) & 0x3,
+                    'opll_patch': fm_instrument_data[5],
+                    #'am2': (fm_data[3] >> 6) & 0x3,
 
                     'operator_data': [],
                 }
@@ -669,57 +601,392 @@ def main(argv=None):
                 # get operator data for each operator
                 for j in range (0, instrument['fm']['op_count']):
 
-                    operator_data = struct.unpack("BBBBBBBB", data[operator_pointer : operator_pointer + 8])
+                    operator_data = fm_operator_data[j]
 
                     operator = {
-                        'mult': operator_data[0] & 0xf,
-                        'dt': (operator_data[0] >> 4) & 0x7,
-                        'ksr': operator_data[0] >> 7,
+                        'mult': operator_data[3],
+                        'dt': operator_data[9],
+                        'ksr': operator_data[19],
 
-                        'tl': operator_data[1] & 0x7f,
-                        'sus': operator_data[1] >> 7,
+                        'tl': operator_data[6],
+                        'sus': operator_data[16],
 
-                        'ar': operator_data[2] & 0x1f,
-                        'vib': (operator_data[2] >> 5) & 0x1,
-                        'rs': (operator_data[2] >> 6) & 0x3,
+                        'ar': operator_data[1],
+                        'vib': operator_data[17],
+                        'rs': operator_data[8],
 
-                        'dr': operator_data[3] & 0x1f,
-                        'ksl': (operator_data[3] >> 5) & 0x3,
-                        'am': operator_data[3] >> 7,
+                        'dr': operator_data[2],
+                        'ksl': operator_data[15],
+                        'am': operator_data[0],
 
-                        'd2r': operator_data[4] & 0x1f,
-                        'kvs': (operator_data[4] >> 5) & 0x3,
-                        'egt': operator_data[4] >> 7,
+                        'd2r': operator_data[10],
+                        'kvs': operator_data[21],
+                        'egt': operator_data[14],
 
-                        'rr': operator_data[5] & 0xf,
-                        'sl': operator_data[5] >> 4,
+                        'rr': operator_data[4],
+                        'sl': operator_data[5],
 
-                        'ssg': operator_data[6] & 0xf,
-                        'dvb': operator_data[6] >> 4,
+                        'ssg': operator_data[11],
+                        'dvb': operator_data[13],
 
-                        'ws': operator_data[7] & 0x7,
-                        'dt2': (operator_data[7] >> 3) & 0x3,
-                        'dam': (operator_data[7] >> 5) & 0x7,
+                        'ws': operator_data[18],
+                        'dt2': operator_data[7],
+                        'dam': operator_data[12],
                     }
 
-                    instrument['fm']['operator_data'].append(operator)
+                    instrument['fm']['operator_data'].append(operator) 
 
-                    operator_pointer += 8
+            # **Game Boy instrument data**
+            gameboy_instrument_data = struct.unpack("<BBBB", data[feature_pointer:feature_pointer+4])
+
+            feature_pointer += 4
+
+            # **C64 instrument data**
+            c64_instrument_data = struct.unpack("<" + ("B" * 24), data[feature_pointer:feature_pointer+24])
+
+            feature_pointer += 24
+
+            # **Amiga instrument data**
+            amiga_instrument_data = struct.unpack("<HBB", data[feature_pointer:feature_pointer + 4])
+
+            feature_pointer += 16
+
+            # **standard instrument data**
+            standard_instrument_data = struct.unpack("<" + ("I" * 8) + ("i" * 8) + "BBBB", data[feature_pointer:feature_pointer + 68])
+
+            feature_pointer += 68
+
+            # volume macro ?
+            volume_macro_len = standard_instrument_data[0]
+
+            if volume_macro_len > 0:
+
+                instrument["volume_macro"] = {
+                    "length": volume_macro_len,
+                    "loop": standard_instrument_data[8],
+                    "data": struct.unpack("<" + ("I" * volume_macro_len), data[feature_pointer:feature_pointer + (volume_macro_len * 4)])
+                }
+
+            feature_pointer += volume_macro_len * 4
+
+            # arp macro ?
+            # skip
+            arp_macro_len = standard_instrument_data[1]
+            feature_pointer += arp_macro_len * 4
+
+            # duty macro ?
+            # skip
+            duty_macro_len = standard_instrument_data[2]
+            feature_pointer += duty_macro_len * 4
+
+            # wave macro ?
+            # skip
+            wave_macro_len = standard_instrument_data[3]
+            feature_pointer += wave_macro_len * 4
+
+            # pitch macro ?
+            # skip
+            pitch_macro_len = standard_instrument_data[4]
+            feature_pointer += pitch_macro_len * 4
+
+            # extra 1 macro ?
+            # skip
+            extra1_macro_len = standard_instrument_data[5]
+            feature_pointer += extra1_macro_len * 4
+
+            # extra 2 macro ?
+            # skip
+            extra2_macro_len = standard_instrument_data[6]
+            feature_pointer += extra2_macro_len * 4
+
+            # extra 3 macro ?
+            # skip
+            extra3_macro_len = standard_instrument_data[7]
+            feature_pointer += extra3_macro_len * 4
+
+            # fm macro lengths
+            fm_macro_lengths = struct.unpack("<IIII", data[feature_pointer:feature_pointer+16])
+            feature_pointer += 16
+
+            # macro loops
+            # skip
+            feature_pointer += 16
+
+            # macro opens
+            # skip
+            feature_pointer += 12
+
+            # alg macro
+            # skip
+            alg_macro_len = fm_macro_lengths[0]
+            feature_pointer += alg_macro_len * 4
+
+            # fb macro
+            # skip
+            fb_macro_len = fm_macro_lengths[1]
+            feature_pointer += fb_macro_len * 4
+
+            # fms macro
+            # skip
+            fms_macro_len = fm_macro_lengths[2]
+            feature_pointer += fms_macro_len * 4
+            
+            # ams macro
+            # skip
+            ams_macro_len = fm_macro_lengths[3]
+            feature_pointer += ams_macro_len * 4
+
+            # **operator macro headers** × 4 (>=29)            
+            operator_macro_lengths = {}
+
+            # get lengths of operator macros
+            for j in range(0, 4):
+
+                operator_macro_lengths[j] = struct.unpack("<" + ("I" * 12), data[feature_pointer:feature_pointer+48])
+                feature_pointer += 48
+
+                # skip operator macro loops
+                feature_pointer += 48
+
+                # skip operator macro opens
+                feature_pointer += 12
+
+            # **operator macros** × 4 (>=29)
+            # skip
+            for j in range(0, 4):
+                for k in range(0, 12):
+                    feature_pointer += operator_macro_lengths[j][k] * 1
+
+            # **release points** (>=44)
+            # skip
+            feature_pointer += 12 * 4
+
+            # **operator release points** × 4 (>=44)
+            # skip
+            for j in range(0, 4):
+                feature_pointer += 12 * 4
+
+            # **extended op macro headers** × 4 (>=61)       
+            ex_operator_macro_lengths = {}
+
+            # get lengths of extended operator macros
+            for j in range(0, 4):
+
+                ex_operator_macro_lengths[j] = struct.unpack("<" + ("I" * 8), data[feature_pointer:feature_pointer+32])
+                feature_pointer += 32
+
+                # skip operator macro loops
+                feature_pointer += 32
+
+                # skip operator macro releases
+                feature_pointer += 32
+
+                # skip operator macro opens
+                feature_pointer += 8
+
+            # **extended op macros** × 4 (>=61)
+            # skip
+            for j in range(0, 4):
+                for k in range(0, 8):
+                    feature_pointer += operator_macro_lengths[j][k] * 1
+
+            # **OPL drums mode data** (>=63)
+            opll_drum_data = struct.unpack("<BBHHH", data[feature_pointer:feature_pointer + 8])
+
+            instrument['opl_drums'] = {
+                'fixed_freq': opll_drum_data[0],
+                'kick_freq': opll_drum_data[2],
+                'snare_hat_freq': opll_drum_data[3],
+                'tom_top_freq': opll_drum_data[4],
+            }
+
+            song["instruments"].append(instrument)
+
+    # new instrument format
+    else:
+        
+        # load instruments
+        for i in range (0, song['instrument_count']):
+
+            instrument_pointer = song['instrument_pointers'][i]
+
+            instrument_header = struct.unpack("<IIHH", data[instrument_pointer:instrument_pointer + 12])
+
+            instrument = {
+                'name': "",
+                'type': instrument_header[3],
+                'size': instrument_header[1],
+                'macros': [],
+                'features': [],
+            }
+
+            # go through features and add them to the instrument
+            feature_pointer = instrument_pointer + 12
+
+            while (feature_pointer < instrument_pointer + instrument['size']):
+
+                feature_header = struct.unpack("<HH", data[feature_pointer:feature_pointer + 4])
+
+                feature = {
+                    'code': data[feature_pointer:feature_pointer + 2].decode(),
+                    'length': feature_header[1],
+                    'data': [],
+                }
+
+                # move pointer past header
+                feature_pointer += 4
+
+                # Instrument name feature
+                if (feature['code'] == "NA"):
+
+                    instrument['name'] = data[feature_pointer : feature_pointer + feature['length'] - 1].decode()
+
+                # End features if we reach this code
+                elif (feature['code'] == "EN"):
+
+                    break
+
+                # OPLL drums
+                elif (feature['code'] == "LD"):
+
+                    opll_drum_data = struct.unpack("<BHHH", data[feature_pointer:feature_pointer + 7])
+
+                    instrument['opl_drums'] = {
+                        'fixed_freq': opll_drum_data[0],
+                        'kick_freq': opll_drum_data[1],
+                        'snare_hat_freq': opll_drum_data[2],
+                        'tom_top_freq': opll_drum_data[3],
+                    }
+
+                # Macros
+                elif (feature['code'] == "MA"):
+
+                    header_length = struct.unpack("<H", data[feature_pointer:feature_pointer + 2])[0]
+
+                    macro_pointer = feature_pointer + 2
+
+                    while (macro_pointer < feature_pointer + feature['length']):
+
+                        macro_data = struct.unpack("BBBBBBBB", data[macro_pointer : macro_pointer + 8])
+
+                        macro = {
+                            'code': macro_data[0],
+                            'length': macro_data[1],
+                            'loop': macro_data[2],
+                            'release': macro_data[3],
+                            'mode': macro_data[4],
+                            'word_size': macro_word_size_convert[(macro_data[5] >> 6) & 0x3],
+                            'word_struct_string': macro_word_struct_string[(macro_data[5] >> 6) & 0x3],
+                            'type': (macro_data[5] >> 1) & 0x3,
+                            'delay': macro_data[6],
+                            'speed': macro_data[7],
+                            'data': []
+                        }
+
+                        # end of macros
+                        if (macro['code'] == 255):
+
+                            break
 
 
-            else:
+                        # advance pointer to macro data
+                        macro_pointer += header_length
 
-                feature['data'] = list(data[feature_pointer:feature_pointer + feature['length']])
+                        # get macro data
+                        for j in range(0, macro['length']):
+                            macro_data_pointer = macro_pointer + (j * macro['word_size'])
+                            macro['data'].append(
+                                struct.unpack(
+                                    macro['word_struct_string'],
+                                    data[macro_data_pointer : macro_data_pointer + macro['word_size']]
+                                )[0]
+                            )
 
-                instrument['features'].append(feature)
+                        instrument['macros'].append(macro)
 
 
-            # advance pointer
-            feature_pointer += feature['length']
+                        # advance pointer
+                        macro_pointer += macro['length'] * macro['word_size']
+
+                # FM patch
+                elif (feature['code'] == "FM"):
+
+                    fm_pointer = feature_pointer
+                    fm_data = struct.unpack("BBBB", data[fm_pointer : fm_pointer + 4])
+
+                    instrument['fm'] = {
+                        'op_count': fm_data[0] & 0xf,
+                        'op_enabled': fm_data[0] >> 4,
+
+                        'feedback': fm_data[1] & 0x7,
+                        'algorithm': (fm_data[1] >> 4) & 0x7,
+
+                        'fms': fm_data[2] & 0x7,
+                        'ams': (fm_data[2] >> 3) & 0x3,
+                        'fms2': (fm_data[2] >> 5) & 0x7,
+
+                        'opll_patch': fm_data[3] & 0x1f,
+                        'am2': (fm_data[3] >> 6) & 0x3,
+
+                        'operator_data': [],
+                    }
+
+                    operator_pointer = feature_pointer + 4
+
+                    # get operator data for each operator
+                    for j in range (0, instrument['fm']['op_count']):
+
+                        operator_data = struct.unpack("BBBBBBBB", data[operator_pointer : operator_pointer + 8])
+
+                        operator = {
+                            'mult': operator_data[0] & 0xf,
+                            'dt': (operator_data[0] >> 4) & 0x7,
+                            'ksr': operator_data[0] >> 7,
+
+                            'tl': operator_data[1] & 0x7f,
+                            'sus': operator_data[1] >> 7,
+
+                            'ar': operator_data[2] & 0x1f,
+                            'vib': (operator_data[2] >> 5) & 0x1,
+                            'rs': (operator_data[2] >> 6) & 0x3,
+
+                            'dr': operator_data[3] & 0x1f,
+                            'ksl': (operator_data[3] >> 5) & 0x3,
+                            'am': operator_data[3] >> 7,
+
+                            'd2r': operator_data[4] & 0x1f,
+                            'kvs': (operator_data[4] >> 5) & 0x3,
+                            'egt': operator_data[4] >> 7,
+
+                            'rr': operator_data[5] & 0xf,
+                            'sl': operator_data[5] >> 4,
+
+                            'ssg': operator_data[6] & 0xf,
+                            'dvb': operator_data[6] >> 4,
+
+                            'ws': operator_data[7] & 0x7,
+                            'dt2': (operator_data[7] >> 3) & 0x3,
+                            'dam': (operator_data[7] >> 5) & 0x7,
+                        }
+
+                        instrument['fm']['operator_data'].append(operator)
+
+                        operator_pointer += 8
 
 
-        # add instrument
-        song['instruments'].append(instrument)
+                else:
+
+                    feature['data'] = list(data[feature_pointer:feature_pointer + feature['length']])
+
+                    instrument['features'].append(feature)
+
+
+                # advance pointer
+                feature_pointer += feature['length']
+
+
+            # add instrument
+            song['instruments'].append(instrument)
 
     # wavetables
     for i in range(0, song['wavetable_count']):

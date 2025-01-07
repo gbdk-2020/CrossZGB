@@ -338,9 +338,10 @@ $(OBJDIR_RES)/%.uge.c: ../res/music/%.uge
 $(OBJDIR_RES)/%.uge.c: ../res/music/$(EXT)/%.uge
 	@$(UGE2SOURCE) $< -b 255 $(basename $(basename $(notdir $<)))_uge $@
 
-$(OBJDIR_RES)/%.fur.c: ../res/music/$(EXT)/%.fur
+$(OBJDIR_RES)/%.fur.o: ../res/music/$(EXT)/%.fur
 	@$(FUR2JSON) -o $(basename $@).json $< > /dev/null
-	@$(JSON2SMS) -a LIT -b 255 -i $(basename $(basename $(notdir $<)))_fur -o $@ $(basename $@).json > /dev/null
+	@$(JSON2SMS) --sdas -a LIT_ -b 255 -i $(basename $(basename $(notdir $<)))_fur -o $(basename $@).s $(basename $@).json > /dev/null
+	@$(LCC) $(CFLAGS) -c -o $@ $(basename $@).s
 
 $(OBJDIR_RES)/%.vgm.o: ../res/music/$(EXT)/%.vgm
 	@echo compiling resource $<
