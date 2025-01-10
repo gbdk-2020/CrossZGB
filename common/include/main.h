@@ -6,6 +6,7 @@
 #include "Sprite.h"
 #include "Scroll.h"
 #include "TilesInfo.h"
+#include "gbc_hicolor.h"
 
 typedef void (*Void_Func_Void)(void);
 typedef void (*Void_Func_SpritePtr)(Sprite*);
@@ -33,15 +34,32 @@ extern UINT8 spritePalsOffset[];
 extern UINT8 _is_SGB;
 
 extern UINT8 current_state;
-void SetState(UINT8 state);
-extern UINT8 delta_time;
 
+void SetState(UINT8 state);
+
+extern UINT8 delta_time;
+extern UINT8 fade_enabled;
 
 #if defined(NINTENDO)
 void LCD_isr(void) NONBANKED;
+inline void LCD_uninstall(void) { 
+	CRITICAL {
+		remove_LCD(LCD_isr);
+	}
+	set_interrupts(IE_REG & ~LCD_IFLAG);
+}
+inline void LCD_install(void) { 
+	CRITICAL {
+		remove_LCD(LCD_isr);
+		add_LCD(LCD_isr);
+	}
+	set_interrupts(IE_REG | LCD_IFLAG);
+}
 #define SetWindowY(A) SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (A), DEVICE_SCREEN_PX_HEIGHT) 
 #elif defined(SEGA)
 #define SetWindowY(A)
+#define LCD_uninstall(A)
+#define LCD_install(A)
 #endif
 
 #define IMPORT_MAP(MAP) extern struct MapInfo MAP; extern const void __bank_##MAP
@@ -52,6 +70,16 @@ void LCD_isr(void) NONBANKED;
 #define IMPORT_BORDER(MAP) extern struct MapInfo MAP; extern const void __bank_##MAP
 #else
 #define IMPORT_BORDER(MAP) extern void MAP
+#endif
+
+#if defined(NINTENDO) && defined(CGB)
+#define IMPORT_HICOLOR(IMAGE) extern const struct hicolor_data HICOLOR_VAR(IMAGE); extern const void __bank_##IMAGE
+#define HICOLOR_START(IMAGE) hicolor_start(&HICOLOR_VAR(IMAGE), BANK(IMAGE))
+#define HICOLOR_STOP hicolor_stop()
+#else
+#define IMPORT_HICOLOR(IMAGE) extern void IMAGE
+#define HICOLOR_START(IMAGE) (0)
+#define HICOLOR_STOP
 #endif
 
 #ifdef SEGA
