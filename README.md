@@ -248,7 +248,7 @@ If a sprite coroutine is called from within the sprite `UPDATE()` handler only, 
 <details>
 <summary>CPU Stack</summary>
 
-Each coroutine has it's own small CPU stack (`64` bytes default) with space for:
+Each coroutine has it's own small CPU stack (`96` bytes default) with space for:
 - A few local variables
 - Storage of the return addresses and parameters of function calls and any function sub-calls they might make.
 - Any interrupts that might trigger during coroutine execution
@@ -260,11 +260,11 @@ So keep in mind that it's easy to overflow the stack by defining even small loca
 The number of contexts can be changed by defining `CORO_MAX_CONTEXTS` with a value in the `ZGBMain.h`.
 - For example `#define CORO_MAX_CONTEXTS 8` to change the number of coroutines allocated to `8`.
 
-The size of the coroutine stacks can also be changed using `MAX_CORO_STACK_SIZE` in a similar way.
-- For example `#define MAX_CORO_STACK_SIZE 32` to change the number of coroutines allocated to `32`.
+The size of the coroutine stacks can also be changed using `CORO_STACK_SIZE` in a similar way.
+- For example `#define CORO_STACK_SIZE 128` to change the size of the coroutine stacks to `128` bytes.
 - **Warning:** Make sure there is sufficient memory for the stack, if the coroutine memory usage exceeds it's allocated stack size there will either be a crash or memory corruption.
 
-For changing both values be mindful that the total memory used is `CORO_STACK_SIZE x CORO_MAX_CONTEXTS`.
+For changing both values be mindful that the total memory used is `CORO_STACK_SIZE x CORO_STACK_SIZE`.
 
 </details>
 
@@ -281,8 +281,8 @@ For changing both values be mindful that the total memory used is `CORO_STACK_SI
 
 **Disadvantages**
 - Coroutines require memory dedicated to them.
-  - Each coroutine context uses `64` statically allocated bytes.
-  - By default there are `16` contexts which means `16 x 64 bytes per stack = 1024 bytes` of memory used.
+  - Each coroutine context uses `96` statically allocated bytes.
+  - By default there are `16` contexts which means `16 x 96 bytes per stack = 1536 bytes` of memory used.
   - See the `Stack` section about changing the default size and number of contexts.
 - The CPU stack for each coroutine is very small, so care is needed to avoid overflowing the stack and causing a crash or memory corruption.
 </details>
