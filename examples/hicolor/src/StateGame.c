@@ -12,6 +12,8 @@ void START(void) {
 	LCD_uninstall();
 	// disable fading between the state transitions
 	fade_enabled = FALSE;
+	// initialize the internal scroll position variables
+	scroll_y = scroll_x = 0;
 	// start display
 	scroll_limit = HICOLOR_START(test_pattern_tall);
 }
