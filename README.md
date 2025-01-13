@@ -26,6 +26,47 @@ It uses [GBDK 2020](https://github.com/gbdk-2020/gbdk-2020/releases/latest) but 
 ## Examples
 See the included basic [example projects](/examples) as well as the [Made with CrossZGB](https://github.com/gbdk-2020/CrossZGB/wiki/Made-with-CrossZGB) Wiki page for source code and demonstrations of how to target multiple platforms and use other features of the engine.
 
+<details>
+  <summary><strong>List of Examples</strong></summary>
+
+### Template
+Basic template project to use as a starting point for your own project or following the tutorial.
+
+#### Aiming
+How to aim and shoot a projectile using the Bresenham algorithm.
+
+#### Animation
+Character sprite animation with directional movement.
+
+#### Banjo
+How to use the Banjo Music driver for SMS/Game Gear consoles.
+
+#### Coroutines
+Shows how to aim and shoot a projectile using the Bresenham algorithm, running the bullet logic using the coroutines feature.
+
+#### Hicolor
+Uses the "hi-color" feature to display background images with thousands of colors on the Game Boy Color, useful for title screens, menus, cut scenes.
+
+#### Multiplayer
+Control two players with separate input on consoles which support two joypads.
+
+#### Pacman
+A more advanced coroutine example with the pacman game using coroutines to run the ghost logic.
+
+#### Platform
+An example of physics and collision detection for a platformer style game.
+
+#### Print
+Basic text printing demo.
+
+#### psglib
+How to use the PSGLib driver for playing music on the SMS/GG systems.
+
+#### Tileupdate
+Shows how to load and replace tile data in-place to animate the player sprite instead of using the native CrossZGB sprite animation feature which loads multiple frames to vram.
+</details>
+<!-- END EXAMPLES SUBSECTION -->
+
 ## Documentation
 Check the [wiki](https://github.com/gbdk-2020/CrossZGB/wiki) and this README
 
