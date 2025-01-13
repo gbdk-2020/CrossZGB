@@ -613,6 +613,64 @@ void START() {
 
 ---
 </details>
+<!-- START GBC HICOLOR SUBSECTION -->
+<details>
+  <summary><strong> Game Boy Color "Hi Color" backgrounds</strong></summary>
+The "Hi Color" feature can displays background images with thousands of colors on the Game Boy Color, useful for title screens, menus, cut scenes, etc.
+
+Follow the next steps to create and display a Hi Color background in your game
+- Create the folder `res/hicolor/gbc`
+- Add a png image with these limitations:
+  - The width must be 160 pixels wide
+  - The height must be between 8 and 200 pixels tall (in even multiples of 8)
+  - There is not a limit to the number of colors or unique tiles of the source image, however they will get reduced to the supported amount with some visual artifacts. Vertical Gradients tend to work better than horizontal.
+- Create a matching .png.meta type file with the same filename and any options for converting the image. The standard options are `--type=1 -L=1 -R=1`
+
+Here is an example of displaying a background (with some extras such as scrolling)
+```C
+#include "Banks/SetAutoBank.h"
+#include "Keys.h"
+#include "ZGBMain.h"
+
+// The imported variable name here should match the filename
+IMPORT_HICOLOR(your_hicolor_image_name_here);
+UINT8 scroll_limit;
+
+void START(void) {
+	// Uninstall the standard LCD routine (used for the overlay window)
+	LCD_uninstall();
+	// Disable fading between the state transitions
+	fade_enabled = FALSE;
+	// Initialize the internal scroll position variables
+	scroll_y = scroll_x = 0;
+	// Start displaying the Hi Color image
+	scroll_limit = HICOLOR_START(your_hicolor_image_name_here);
+}
+
+void UPDATE(void) {
+	// Scrolling is optional and only for images taller than 144 pixels
+	//
+	// Scroll image up and down with keys within the scroll limits
+	if (KEY_PRESSED(J_UP | J_A)) {
+		if (scroll_y) scroll_y--;
+	} else if (KEY_PRESSED(J_DOWN | J_B)) {
+		if (scroll_y < scroll_limit) scroll_y++;
+	}
+}
+
+void DESTROY(void) {
+	// Stop displaying the Hi Color image
+	HICOLOR_STOP;
+	// reinstall the standard LCD routine
+	LCD_install();
+	// Re-enable fading
+	fade_enabled = TRUE;
+}
+```
+
+---
+</details>
+<!-- END GBC HICOLOR SUBSECTION -->
 
 <details>
   <summary><strong>Savegame support</strong></summary>
