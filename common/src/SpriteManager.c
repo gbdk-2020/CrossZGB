@@ -35,7 +35,11 @@ UINT8 sprite_manager_removal_check;
 INT16 last_sprite_loaded = 0;
 UINT8 last_sprite_pal_loaded = 0;
 
+Sprite* prev_scroll_target;
+
 void SpriteManagerReset(void) {
+	prev_scroll_target = NULL;
+
 #if defined(NINTENDO)
 	last_sprite_loaded = LAST_SPRITE_IDX;
 #elif defined(SEGA)
@@ -233,60 +237,53 @@ void SpriteManagerFlushRemove(void) {
 
 UINT8 enable_flickering = 1;
 UINT8 THIS_IDX = 0;
-Sprite* THIS = 0;
+Sprite* THIS = NULL;
 void SpriteManagerUpdate(void) {
-	static UINT8 __save, i, target_idx;
+	static UINT8 __save;
 
+	// save the current bank
 	__save = CURRENT_BANK;
-
-	// render scroll target first to give it priority over the others 
-	if (enable_flickering) {
-		if ((scroll_target) && (!scroll_target->marked_for_removal)) {
-			for (target_idx = 0; target_idx != VECTOR_LEN(sprite_manager_updatables); ++target_idx) {
-				if ((THIS = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, target_idx)]) == scroll_target) {
-					i = THIS_IDX; // save THIS_IDX from the last iteration
-					THIS_IDX = target_idx;
-					SWITCH_ROM(spriteBanks[THIS->type]);
-					spriteUpdateFuncs[THIS->type](); // call sprite update func
-					RefreshScroll();
-					DrawSprite(); // this needs to be done using the sprite bank because the animation array is stored there
-					THIS_IDX = i; // restore THIS_IDX
+	// if scroll target changed, then find it in the updateables vector and make it the first one in it
+	if (prev_scroll_target != scroll_target) {
+		// do that only if flickering enabled
+		if ((enable_flickering) && (scroll_target)) {
+			for (UINT8 i = 0; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
+				if (sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, i)] == scroll_target) {
+					VectorExchange(sprite_manager_updatables, 0, i);
 					break;
 				}
-			
 			}
-		} else {
-			target_idx = N_SPRITE_MANAGER_SPRITES;
-		}
-	} else {
-		target_idx = N_SPRITE_MANAGER_SPRITES;
-		THIS_IDX = 0;
-	}
 
-	// render other sprites roundrobin 
-	if (THIS_IDX >= VECTOR_LEN(sprite_manager_updatables)) THIS_IDX = 0;
-	for (i = VECTOR_LEN(sprite_manager_updatables); i != 0; --i) {
-		THIS = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, THIS_IDX)];
-		if ((THIS_IDX != target_idx) && (!THIS->marked_for_removal)) {
-			SWITCH_ROM(spriteBanks[THIS->type]);
-			spriteUpdateFuncs[THIS->type](); // call sprite update func
-			if (THIS == scroll_target) {
-				RefreshScroll();
-			}
-			DrawSprite(); // this needs to be done using the sprite bank because the animation array is stored there
 		}
-		if (++THIS_IDX >= VECTOR_LEN(sprite_manager_updatables)) THIS_IDX = 0;
+		prev_scroll_target = scroll_target;
 	}
-	++THIS_IDX;
-
+	// if flickering enabled cycle the updateables array so sprites are drawn roundrobin, except the scroll target
+	if (enable_flickering) {
+		VectorRotateFrom(sprite_manager_updatables, (scroll_target) ? 1 : 0);
+	}
+	// call the update function of the each sprite and render sprite after
+	for (UINT8 i = 0; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
+		// get the sprite pointer and the sprite index
+		THIS = sprite_manager_sprites[THIS_IDX = VECTOR_GET(sprite_manager_updatables, i)];
+		// if marked for removal then skip it
+		if (THIS->marked_for_removal) continue;
+		// switch rom bank of the sprite
+		SWITCH_ROM(spriteBanks[THIS->type]);
+		// call the sprite update function
+		spriteUpdateFuncs[THIS->type]();
+		// if sprite is a scroll target then update the scroll position
+		if (THIS == scroll_target) {
+			RefreshScroll();
+		}
+		// render sprite into the OAM
+		DrawSprite();
+	}
+	// restore bank
 	SWITCH_ROM(__save);
-
 	// hide unused sprites and swap shadow OAMs
 	SwapOAMs();
-
 	// remove sprites pending for remove
 	if (sprite_manager_removal_check) {
 		SpriteManagerFlushRemove();
 	}
-
 }

@@ -29,21 +29,21 @@
          19,18,17,16,15,14,13,12,11,10, \
          9,8,7,6,5,4,3,2,1,0
 
-#define VECTOR_DECLARE(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1]
+#define VECTOR_DECLARE(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1u]
 #define VECTOR(...) {PP_NARG(__VA_ARGS__), __VA_ARGS__}
-#define VECTOR_ITERATE(V, IDX, ELEM) for(IDX = 0, ELEM = V[1]; IDX < V_LEN(V); IDX++, ELEM = V[IDX + 1])
+#define VECTOR_ITERATE(V, IDX, ELEM) for(IDX = 0, ELEM = V[1]; IDX < V_LEN(V); IDX++, ELEM = V[IDX + 1u])
 #define VECTOR_LEN(V) (V[0])
 #define VECTOR_CLEAR(V) (V[0]=0)
-#define VECTOR_GET(V, POS) (V[(POS) + 1])
+#define VECTOR_GET(V, POS) (V[(POS) + 1u])
 #define VECTOR_ADD(V, ELEM) (V[++V[0]] = (ELEM))
-#define VECTOR_DEL(V, POS) (memcpy(&(V[(POS) + 1]), &(V[(POS) + 2]), ((V[0]) - (POS)) * sizeof(V[0])),V[0]--)
+#define VECTOR_DEL(V, POS) (memcpy(&(V[(POS) + 1u]), &(V[(POS) + 2u]), ((V[0]) - (POS))), V[0]--)
 #define VECTOR_POP(V) (V[V[0]--])
-#define VECTOR_INS(V, POS, ELEM) (memmove(&(V[(POS) + 2]), &(V[(POS) + 1]), ((V[0]) - (POS) + 1) * sizeof(V[0])), (V[(POS) + 1] = (ELEM)), V[0]++)
-#define VECTOR_SET_DIRECT(V, POS, ELEM) ((V[(POS) + 1]) = (ELEM))
+#define VECTOR_INS(V, POS, ELEM) (memmove(&(V[(POS) + 2u]), &(V[(POS) + 1u]), ((V[0]) - (POS) + 1u), (V[(POS) + 1u] = (ELEM)), V[0]++)
+#define VECTOR_SET_DIRECT(V, POS, ELEM) ((V[(POS) + 1u]) = (ELEM))
 
 #define LIST(...) {__VA_ARGS__, 0}
 
-#define DECLARE_VECTOR(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1] = {0}
+#define DECLARE_VECTOR(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1u] = {0}
 #ifndef NDEBUG
 #define PP_Q(x) #x
 #define PP_QUOTE(x) PP_Q(x)
@@ -54,9 +54,19 @@
 #define PRINT_VECTOR(V)
 #endif
 
-#define VectorGetElem(V, IDX) (V[IDX + 1])
+#define VectorGetElem(V, IDX) (V[IDX + 1u])
 #define VectorAdd(V, ELEM) (V[++V[0]] = (ELEM))
-#define IterateVector(V, IDX, ELEM) for (IDX = 0, ELEM = V[1]; IDX != V[0]; IDX++, ELEM = V[IDX + 1])
+#define IterateVector(V, IDX, ELEM) for (IDX = 0, ELEM = V[1]; IDX != V[0]; IDX++, ELEM = V[IDX + 1u])
 void VectorRemovePos(UINT8* v, UINT8 pos);
+void BufferRotate(UINT8* v, UINT8 len);
+#define VectorRotate(v) BufferRotate(&v[1], v[0])
+inline void VectorRotateFrom(UINT8* v, UINT8 pos) { 
+	if (pos < v[0]) BufferRotate(&v[pos + 1u], (v[0] - pos));
+}
+void BufferExchange(UINT8* v, UINT16 xy);
+inline void VectorExchange(UINT8* v, UINT8 pos1, UINT8 pos2) { 
+	if ((pos1 < v[0]) && (pos2 < v[0])) BufferExchange(v, (UINT16)((pos1 + 1u) << 8) | (UINT8)(pos2 + 1u));
+}
+
 
 #endif
