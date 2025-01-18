@@ -88,10 +88,11 @@ void BufferRotate(UINT8* v, UINT8 len) NAKED {
 				
 		ret
 #elif defined(__TARGET_sms) || defined(__TARGET_gg)
-		ex de, hl
-		ld hl, #2
-		add hl, sp
-		ld a, (hl)
+		pop bc
+		dec sp
+		pop af
+		push bc
+
 		sub #1
 		ret c
 		ret z
@@ -99,8 +100,8 @@ void BufferRotate(UINT8* v, UINT8 len) NAKED {
 		ld c, a
 		ld b, #0
 
-		ld h, d
-		ld l, e
+		ld d, h
+		ld e, l
 		ld a, (de)
 
 		inc hl
