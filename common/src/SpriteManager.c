@@ -221,18 +221,25 @@ void SpriteManagerRemoveSprite(Sprite* sprite) {
 void SpriteManagerFlushRemove(void) {
 	//We must remove sprites in inverse order because everytime we remove one the vector shrinks and displaces all elements
 	UINT8 __save = CURRENT_BANK;
-	for(THIS_IDX = VECTOR_LEN(sprite_manager_updatables) - 1u; (UINT8)(THIS_IDX + 1u) != 0u; THIS_IDX --) {
-		THIS = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, THIS_IDX)];
-		if(THIS->marked_for_removal) {
-			StackPush(sprite_manager_sprites_pool, VECTOR_GET(sprite_manager_updatables, THIS_IDX));
-			VectorRemovePos(sprite_manager_updatables, THIS_IDX);
-
+	// iterate updatable sprites
+	UINT8 current = 0;
+	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
+		UINT8 sprite_idx = VECTOR_GET(sprite_manager_updatables, THIS_IDX);
+		if (THIS->marked_for_removal) {
+			// switch ROM bank and call the sprite destroy handler
 			SWITCH_ROM(spriteBanks[THIS->type]);
 			spriteDestroyFuncs[THIS->type]();
+			// return sprite to sprite pool
+			StackPush(sprite_manager_sprites_pool, sprite_idx);
+		} else {
+			// add sprite to the temporary vector instead
+			VECTOR_SET_DIRECT(sprite_manager_updatables, current++, sprite_idx);
 		}
+	
 	}
-	sprite_manager_removal_check = 0;
+	VECTOR_LEN(sprite_manager_updatables) = current;
 	SWITCH_ROM(__save);
+	sprite_manager_removal_check = 0;
 }
 
 UINT8 enable_flickering = 1;
