@@ -261,10 +261,8 @@ void SpriteManagerUpdate(void) {
 	if (enable_flickering) {
 		VectorRotateFrom(sprite_manager_updatables, (scroll_target) ? 1 : 0);
 	}
-	// call the update function of the each sprite and render sprite after
-	for (UINT8 i = 0; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
-		// get the sprite pointer and the sprite index
-		THIS = sprite_manager_sprites[THIS_IDX = VECTOR_GET(sprite_manager_updatables, i)];
+	// iterate updatables, call the update function of the each sprite and render it
+	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
 		// if marked for removal then skip it
 		if (THIS->marked_for_removal) continue;
 		// switch rom bank of the sprite
