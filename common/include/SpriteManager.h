@@ -9,7 +9,7 @@
 
 #define N_SPRITE_MANAGER_SPRITES 20
 
-#define SPRITEMANAGER_ITERATE(i, spr) for(i = 0u, spr = sprite_manager_sprites[sprite_manager_updatables[1]]; i != sprite_manager_updatables[0]; ++i, spr = sprite_manager_sprites[sprite_manager_updatables[i + 1u]])
+#define SPRITEMANAGER_ITERATE(i, spr) for(i = 0u, spr = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, 0)]; i != VECTOR_LEN(sprite_manager_updatables); spr = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, ++i)])
 
 //Pool
 extern Sprite* sprite_manager_sprites[];
