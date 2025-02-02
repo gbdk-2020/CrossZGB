@@ -305,7 +305,7 @@ $(OBJDIR_RES)/%.png.c: ../res/borders/$(EXT)/%.png
 	@$(PNG2ASSET) $< -b 255 -map -bpp 4 -max_palettes 4 -use_map_attributes -use_structs -pack_mode sgb -c $@
 
 .SECONDEXPANSION:
-$(OBJDIR_RES)/%.c: ../res/hicolor/$(EXT)/%.png $$(wildcard ../res/backgrounds/$(EXT)/%.png.meta)
+$(OBJDIR_RES)/%.c: ../res/hicolor/$(EXT)/%.png $$(wildcard ../res/hicolor/$(EXT)/%.png.meta)
 	$(PNG2HICOLORGB) $< --csource --bank=255 $(if $(wildcard $<.meta),`cat <$<.meta`) -o $@
 
 .SECONDEXPANSION:
