@@ -306,7 +306,7 @@ $(OBJDIR_RES)/%.png.c: ../res/borders/$(EXT)/%.png
 
 .SECONDEXPANSION:
 $(OBJDIR_RES)/%.c: ../res/hicolor/$(EXT)/%.png $$(wildcard ../res/hicolor/$(EXT)/%.png.meta)
-	$(PNG2HICOLORGB) $< --csource --bank=255 $(if $(wildcard $<.meta),`cat <$<.meta`) -o $@
+	@$(PNG2HICOLORGB) $< --csource --bank=255 $(if $(wildcard $<.meta),`cat <$<.meta`) -o $@
 
 .SECONDEXPANSION:
 $(OBJDIR_RES)/%.png.c: ../res/%.png $$(wildcard ../res/%.png.meta)
