@@ -59,7 +59,7 @@ static void log_packet_verbose(uint8_t cmd) {
     log_verbose("PACKET (reason: 0x%02x): [", cmd);
 
     for (unsigned int row = 0; row < row_count; row++) {
-        log_verbose("%d", row_data[row]);
+        log_verbose("0x%02x", row_data[row]);
         if (row != (row_count - 1)) log_verbose(", ");
     }
     log_verbose("]\n");
@@ -120,12 +120,12 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
                 for (unsigned int row = 0; row < row_count; row++) {
                     uint8_t command = row_data[row];
                     if (command & 0b10000000) {
-                        last_channel = ((command & 0b01100000) >> 5) & 3;
+                        last_channel = (command & 0b01100000) >> 5;
                         if (vgm_opt.channel_enabled[last_channel]) {
                             channel_mute_mask |= (1 << last_channel);
                             fprintf(FOUT, "PSG_LATCH|%s|", ch_names[last_channel]);
                             if (command & 0b00010000) fprintf(FOUT, "PSG_VOLUME|");
-                            fprintf(FOUT, "0x%02x,", command & 0x00001111);
+                            fprintf(FOUT, "0x%02x,", command & 0b00001111);
                         }
                     } else {
                         if (vgm_opt.channel_enabled[last_channel]) fprintf(FOUT, "0x%02x,", command);
