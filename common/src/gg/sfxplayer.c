@@ -44,8 +44,10 @@ __asm
         ld a, (hl)
         inc hl
         and d
-        ld b, a                     ; d = frame channel count
-        jp z, 0$
+        ld b, a                     ; b = frame channel count
+        jp z, 0$                    ; length 0 == terminator
+	cp d
+	jp z, 0$                    ; length 0x0f == empty row
 
         ld c, #_PSG
         otir
