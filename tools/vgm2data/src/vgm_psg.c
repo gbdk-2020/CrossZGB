@@ -130,7 +130,7 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
                 for (unsigned int row = 0; row < row_count; row++) {
                     uint8_t command = row_data[row];
                     if (command & 0b10000000) {
-                        fprintf(FOUT, "PSG_LATCH|%s|", ch_names[last_channel]);
+                        fprintf(FOUT, "PSG_LATCH|%s|", ch_names[(command & 0b01100000) >> 5]);
                         if (command & 0b00010000) fprintf(FOUT, "PSG_VOLUME|");
                         fprintf(FOUT, "0x%02x,", command & 0b00001111);
                     } else {
@@ -140,8 +140,9 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
 
                 fprintf(FOUT, "\n");
 
-                // reset row
+                // reset row and count
                 row_count = 0;
+                count = 0;
 
                 if (cmd == CMD_END_SND_DATA) {
                     // write terminate sequence and exit
