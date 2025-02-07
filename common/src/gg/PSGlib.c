@@ -202,17 +202,29 @@ void PSGFrame (void) NAKED {
         sub iyl
         ld iyh, a
 
-        bit 7, b
-        jp z, 13$
         bit 4, b
         jp z, 14$
         ld 2(iy), b                     ; volume byte
         jp 11$
 14$:
+        ld a, (_PSGLastChannel)
+        cp #(PSGChannel3 >> 5)
+        jp z, 16$                       ; special case for the noise
+
+        bit 7, b
+        jp z, 13$
         ld 0(iy), b                     ; tone byte
         jp 11$
 13$:
         ld 1(iy), b                     ; tone data byte
+        jp 11$
+
+16$:
+        ld a, b
+        and #0b00000111
+        or #(PSGLatch | PSGChannel3)
+        ld 0(iy), a                     ; tone byte
+        ld 1(iy), a                     ; tone data byte
         jp 11$
 
 ; --- commands -------------------
