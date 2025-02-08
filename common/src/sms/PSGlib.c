@@ -9,19 +9,10 @@
 
 #define PSGData             #0x40
 
-#define PSGLatch            #0b10000000
-#define PSGChannel0         #0b00000000
-#define PSGChannel1         #0b00100000
-#define PSGChannel2         #0b01000000
-#define PSGChannel3         #0b01100000
-#define PSGVolumeData       #0b00010000
-
 #define PSGWait             #0x38
 #define PSGSubString        #0x08
 #define PSGLoop             #0x01
 #define PSGEnd              #0x00
-
-static SFR AT(0x7F) PSGPort;
 
 uint8_t PSGStatus = PSG_STOPPED;        // playback status
 uint8_t PSGMuteMask = PSG_MUTE_NONE;    // channel mute mask
@@ -33,7 +24,6 @@ static void *PSGLoopPoint;              // the pointer to the loop begin
 static uint8_t PSGSkipFrames;           // the frames we need to skip
 
 static uint8_t PSGLastChannel;          // last channel
-static uint8_t PSGLastMuted;            // current latched channel is muted
 
 typedef struct shadow_reg_t {
     uint8_t tone;
@@ -58,10 +48,10 @@ void PSGPlay (void *song, uint8_t loop) {
     PSGSubLen = 0;                      // reset the substring len (for compression)
     PSGLastChannel = 0;                 // latch channel 0
 
-    PSGShadow[PSGChannel0 >> 5].volume = PSGLatch | PSGChannel0 | PSGVolumeData | 0x0f;
-    PSGShadow[PSGChannel1 >> 5].volume = PSGLatch | PSGChannel1 | PSGVolumeData | 0x0f;
-    PSGShadow[PSGChannel2 >> 5].volume = PSGLatch | PSGChannel2 | PSGVolumeData | 0x0f;
-    PSGShadow[PSGChannel3 >> 5].volume = PSGLatch | PSGChannel3 | PSGVolumeData | 0x0f;
+    PSGShadow[PSG_CH0 >> 5].volume = PSG_LATCH | PSG_CH0 | PSG_VOLUME | 0x0f;
+    PSGShadow[PSG_CH1 >> 5].volume = PSG_LATCH | PSG_CH1 | PSG_VOLUME | 0x0f;
+    PSGShadow[PSG_CH2 >> 5].volume = PSG_LATCH | PSG_CH2 | PSG_VOLUME | 0x0f;
+    PSGShadow[PSG_CH3 >> 5].volume = PSG_LATCH | PSG_CH3 | PSG_VOLUME | 0x0f;
 
     PSGStatus = PSG_PLAYING;            // start playback
 }
@@ -71,7 +61,7 @@ void PSGRetriggerChannels(uint8_t mask) NAKED {
     __asm
         and #(PSG_CHANNEL0 | PSG_CHANNEL1 | PSG_CHANNEL2 | PSG_CHANNEL3)
         ret z                           ; if nothing to retrigger then return
-        ld c, #_PSGPort                 ; c points to the PSG port
+        ld c, #_PSG                     ; c points to the PSG port
         ld hl, #_PSGShadow              ; hl points to shadow regs copy
         ld de, #3
 0$:
@@ -95,7 +85,7 @@ void PSGCutChannels(uint8_t mask) NAKED {
     __asm
         and #(PSG_CHANNEL0 | PSG_CHANNEL1 | PSG_CHANNEL2 | PSG_CHANNEL3)
         ret z                           ; if nothing to retrigger then return
-        ld c, #_PSGPort                 ; c points to the PSG port
+        ld c, #_PSG                     ; c points to the PSG port
         ld hl, #2$                      ; hl points to the muting data
 0$:
         srl a
@@ -109,8 +99,8 @@ void PSGCutChannels(uint8_t mask) NAKED {
         inc hl
         jr 0$
 2$:
-        .irp ch,PSGChannel0,PSGChannel1,PSGChannel2,PSGChannel3
-            .db #(PSGLatch | ch | PSGVolumeData | 0x0f)
+        .irp ch,PSG_CH0,PSG_CH1,PSG_CH2,PSG_CH3
+            .db #(PSG_LATCH | ch | PSG_VOLUME | 0x0f)
         .endm
     __endasm;
 }
@@ -146,7 +136,7 @@ void PSGFrame (void) NAKED {
 
 1$:
         ld a, b                         ; copy PSG byte into A
-        cp PSGLatch                     ; is it a latch?
+        cp #PSG_LATCH                   ; is it a latch?
         jp c, 7$                        ; if < $80 then it is NOT a latch
 
 ; --- latch --------------------
@@ -155,38 +145,13 @@ void PSGFrame (void) NAKED {
         rlca
         rlca
         and #0x03
-
         ld (_PSGLastChannel), a         ; store last latched channel
-
-        ld hl, #15$                     ; point to the mute bits array
-        add l
-        ld l, a
-        adc h
-        sub l
-        ld h, a
-
-        ld a, (_PSGMuteMask)
-        and (hl)
-        ld (_PSGLastMuted), a           ; do not write data to PSG flag
-        jp nz, 12$                      ; save to shadow copy if muted
-        jp 2$                           ; else write to PSG
-15$:
-        .db PSG_CHANNEL0, PSG_CHANNEL1, PSG_CHANNEL2, PSG_CHANNEL3
+        jp 12$                          ; save to shadow copy
 
 ; --- no latch -----------------
 7$:
         cp PSGData
         jr c, 8$                        ; if < $40 then it is a command
-
-        ld a, (_PSGLastMuted)           ; do not write data to PSG flag
-        or a
-        jr nz, 12$                      ; save to shadow copy if muted, else fall through write to PSG
-
-; --- write to PSG --------------
-
-2$:
-        ld a, b
-        out (_PSGPort), a               ; write to PSG, fall through save to shadow copy
 
 ; --- save shadow registers -----
 
@@ -205,27 +170,48 @@ void PSGFrame (void) NAKED {
         bit 4, b
         jp z, 14$
         ld 2(iy), b                     ; volume byte
-        jp 11$
+        jp 17$
 14$:
         ld a, (_PSGLastChannel)
-        cp #(PSGChannel3 >> 5)
+        cp #(PSG_CH3 >> 5)
         jp z, 16$                       ; special case for the noise
 
         bit 7, b
         jp z, 13$
         ld 0(iy), b                     ; tone byte
-        jp 11$
+        jp 17$
 13$:
         ld 1(iy), b                     ; tone data byte
-        jp 11$
+        jp 17$
 
 16$:
         ld a, b
         and #0b00000111
-        or #(PSGLatch | PSGChannel3)
-        ld 0(iy), a                     ; tone byte
-        ld 1(iy), a                     ; tone data byte
-        jp 11$
+        or #(PSG_LATCH | PSG_CH3)
+        ld b, a
+        ld 0(iy), b                     ; tone byte
+        ld 1(iy), b                     ; tone data byte
+
+; --- check mute and write -------
+17$:
+        ld a, (_PSGLastChannel)
+
+        ld hl, #15$                     ; point to the mute bits array
+        add l
+        ld l, a
+        adc h
+        sub l
+        ld h, a
+
+        ld a, (_PSGMuteMask)
+        and (hl)
+        jp nz, 11$                      ; dont write to PSG if muted
+
+        ld a, b
+        out (_PSG), a                   ; write to PSG
+        jp 11$                          ; loop
+15$:
+        .db PSG_CHANNEL0, PSG_CHANNEL1, PSG_CHANNEL2, PSG_CHANNEL3
 
 ; --- commands -------------------
 8$:
