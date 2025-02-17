@@ -14,7 +14,7 @@ def extract_tile(pixels, x, y, bits, height, pal = None):
         a = b = c = d = 0
         w = 0
         for dx in range(8):
-            px = pixels[(x * 8) + dx, (y * 8) + dy]
+            px = pixels[(x * 8) + dx, (y * height) + dy]
             if (pal != None):
                 f, idx = (True, pal[px]) if px in range(len(pal)) else (False, 0)
             else:
