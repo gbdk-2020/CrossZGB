@@ -11,7 +11,7 @@ inline UINT8 FadeInOp(UINT8 c, UINT8 i) {
 static UINT8* const pals[] = {&BGP_REG, &OBP0_REG, &OBP1_REG};
 
 void FadeDMG(UINT8 fadeout) {
-	UINT8 colors[12];
+	static UINT8 colors[12];
 	UINT8 i, j; 
 	UINT8* c = colors;
 	UINT8 p;
@@ -44,8 +44,8 @@ palette_color_t UpdateColor(UINT8 i, UWORD col) {
 }
 
 void FadeStepColor(UINT8 i) {
-	palette_color_t palette[32];
-	palette_color_t palette_s[32];
+	static palette_color_t palette[32];
+	static palette_color_t palette_s[32];
 	palette_color_t* col = ZGB_Fading_BPal;
 	palette_color_t* col_s = ZGB_Fading_SPal;
 
