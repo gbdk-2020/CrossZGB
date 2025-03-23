@@ -142,12 +142,12 @@ def main(argv=None):
             outf.write(bytes("const font_desc_t {0:s}_font = {{\n"
                              "    .attr         = {1:s}{2:s}0,\n"
                              "    .recode_table = {0:s}_table,\n"
-                             "{2:s}"
+                             "{3:s}"
                              "    .faces        = {0:s}_tiles\n"
                              "}};\n\n".format(identifier, 
                                               "RECODE_7BIT | " if is7BIT else "", 
                                               "FONT_VWF | " if options.vwf else "",
-                                              ".widths       = {0:s}_widths,\n" if options.vwf else "",
+                                              "    .widths       = {0:s}_widths,\n".format(identifier) if options.vwf else "",
                                               ),
                              "ascii"))
 
