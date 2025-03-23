@@ -27,7 +27,7 @@ typedef enum {
 void SetWindowPos(UINT8 x, UINT8 y, UINT8 h);
 #define INIT_HUD_EX(MAP, Y, H)\
 	hud_map_offset = LoadMap(TARGET_WIN, 0, 0, BANK(MAP), &MAP); \
-	SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (Y), (H))
+	SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (UINT8)(Y), (H))
 #define INIT_HUD(MAP)\
 	GetMapSize(BANK(MAP), &MAP, 0, &scroll_h_border); \
 	scroll_h_border = scroll_h_border << 3; \
