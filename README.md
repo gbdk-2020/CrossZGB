@@ -51,7 +51,7 @@ Uses the "hi-color" feature to display background images with thousands of color
 Control two players with separate input on consoles which support two joypads.
 
 #### Pacman
-A more advanced coroutine example with the pacman game using coroutines to run the ghost logic.
+A more advanced coroutine example of the "pacman" game, it is using coroutines to run the ghost logic.
 
 #### Platform
 An example of physics and collision detection for a platformer style game.
@@ -64,6 +64,9 @@ How to use the PSGLib driver for playing music on the SMS/GG systems.
 
 #### Tileupdate
 Shows how to load and replace tile data in-place to animate the player sprite instead of using the native CrossZGB sprite animation feature which loads multiple frames to vram.
+
+#### VWF 
+Contains the VWF library which allows to output the text using the proportional fonts.
 </details>
 <!-- END EXAMPLES SUBSECTION -->
 
