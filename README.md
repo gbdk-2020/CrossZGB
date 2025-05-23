@@ -51,7 +51,7 @@ Uses the "hi-color" feature to display background images with thousands of color
 Control two players with separate input on consoles which support two joypads.
 
 #### Pacman
-A more advanced coroutine example of the "pacman" game, it is using coroutines to run the ghost logic.
+A more advanced coroutine example of the "pacman" game, which is using coroutines to run the ghost logic.
 
 #### Platform
 An example of physics and collision detection for a platformer style game.
