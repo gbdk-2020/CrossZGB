@@ -6,7 +6,7 @@
 #include "Keys.h"
 #include "ZGBMain.h"
 
-#include "dizzy.h"
+#include "dizzy_anim.h"
 
 // Animation state enum
 typedef enum {
@@ -41,8 +41,8 @@ static bool jump;
 
 // movement limits for the sprite
 #define LEFT_BOUND 0
-#define RIGHT_BOUND ((SCREEN_WIDTH - (dizzy_HEIGHT << 3)) << 4)
-#define FLOOR_LEVEL ((SCREEN_HEIGHT - (dizzy_HEIGHT << 3) - 8) << 4)
+#define RIGHT_BOUND ((SCREEN_WIDTH - (dizzy_anim_HEIGHT << 3)) << 4)
+#define FLOOR_LEVEL ((SCREEN_HEIGHT - (dizzy_anim_HEIGHT << 3) - 8) << 4)
 
 // banked data loading helper function declarations
 const UINT8 * get_banked_pointer(UINT8 bank, const UINT8 * const * data);

@@ -27,6 +27,7 @@ UINT8 _is_SGB = 0;
 UINT8 delta_time;
 UINT8 current_state;
 UINT8 state_running = 0;
+UINT8 fade_enabled = TRUE;
 
 void SetState(UINT8 state) {
 	state_running = 0;
@@ -171,7 +172,7 @@ void main(void) {
 		scroll_x_vblank = scroll_x, scroll_y_vblank = scroll_y;
 
 		if (state_running) {				// initialization function may change state immediately
-			FadeOut();
+			if (fade_enabled) FadeOut(); else DISPLAY_ON;
 
 			Void_Func_Void current_update = updateFuncs[current_state];
 
@@ -189,7 +190,7 @@ void main(void) {
 				current_update();		// update current state
 			}
 
-			FadeIn();
+			if (fade_enabled) FadeIn(); else DISPLAY_OFF;
 		}
 
 		destroyFuncs[current_state]();			// destroy current state

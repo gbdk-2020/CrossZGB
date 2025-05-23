@@ -19,7 +19,7 @@ void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data) {
 	if (coro_free_ctx) {
 		coro_runner_context_t * tmp = coro_free_ctx;
 		coro_free_ctx = tmp->next;
-		coro_init(&tmp->coro_context, coro, coro_bank, user_data);
+		coro_init(&tmp->coro_context, coro, coro_bank, user_data, CORO_STACK_SIZE);
 		return tmp;
 	}
 	return NULL;

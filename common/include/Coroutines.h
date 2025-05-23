@@ -24,14 +24,14 @@ extern coro_context_t * coro_current_context;
 bool coro_yield(void);
 
 // initialize coroutine, but don't start
-void coro_init(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data);
+void coro_init(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data, uint16_t stack_size);
 
 // continue coroutine execution
 bool coro_continue(coro_context_t * context);
 
 // initialize and start coroutine
-inline bool coro_start(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data) {
-	coro_init(context, coro, coro_bank, user_data);
+inline bool coro_start(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data, uint16_t stack_size) {
+	coro_init(context, coro, coro_bank, user_data, stack_size);
 	return coro_continue(context);
 }
 

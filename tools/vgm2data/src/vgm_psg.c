@@ -15,7 +15,7 @@
 #include "vgm_gb.h"
 
 
-#define      ROW_BUF_SZ 15
+#define      ROW_BUF_SZ 14
 #define      ROW_MAX    (ROW_BUF_SZ - 1)
 uint8_t      row_data[ROW_BUF_SZ];
 unsigned int row_count; 
@@ -59,7 +59,7 @@ static void log_packet_verbose(uint8_t cmd) {
     log_verbose("PACKET (reason: 0x%02x): [", cmd);
 
     for (unsigned int row = 0; row < row_count; row++) {
-        log_verbose("%d", row_data[row]);
+        log_verbose("0x%02x", row_data[row]);
         if (row != (row_count - 1)) log_verbose(", ");
     }
     log_verbose("]\n");
@@ -87,7 +87,17 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
         cmd = get_byte();
 
         if (cmd == CMD_PSG) {
-            row_data_push(get_byte());
+            uint8_t command  = get_byte();
+
+            if (command & 0b10000000) {
+                last_channel = (command & 0b01100000) >> 5;
+                if (vgm_opt.channel_enabled[last_channel]) {
+                    channel_mute_mask |= (1 << last_channel);
+                    row_data_push(command);
+                }
+            } else {
+                if (vgm_opt.channel_enabled[last_channel]) row_data_push(command);
+            }
             count = 0;
 
         } else if ((cmd == CMD_END_SND_DATA) ||
@@ -111,7 +121,7 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
                 log_packet_verbose(cmd);
 
                 // delay + packet length
-                count = (MIN(15, ((count - 1) * MAX(1, vgm_opt.delay))) << 4) | (row_count & 0x0f);
+                count = (MIN(15, ((count - 1) * MAX(1, vgm_opt.delay))) << 4) | ((row_count) ? (row_count & 0x0f) : 0x0f);
 
                 // Write Placeholder value for Count into the file
                 fprintf(FOUT, "0x%02x,", count);
@@ -120,22 +130,19 @@ uint8_t vgm_process_psg_sound_data(uint8_t * p_buf_in, size_t buf_len_in, FILE *
                 for (unsigned int row = 0; row < row_count; row++) {
                     uint8_t command = row_data[row];
                     if (command & 0b10000000) {
-                        last_channel = ((command & 0b01100000) >> 5) & 3;
-                        if (vgm_opt.channel_enabled[last_channel]) {
-                            channel_mute_mask |= (1 << last_channel);
-                            fprintf(FOUT, "PSG_LATCH|%s|", ch_names[last_channel]);
-                            if (command & 0b00010000) fprintf(FOUT, "PSG_VOLUME|");
-                            fprintf(FOUT, "0x%02x,", command & 0x00001111);
-                        }
+                        fprintf(FOUT, "PSG_LATCH|%s|", ch_names[(command & 0b01100000) >> 5]);
+                        if (command & 0b00010000) fprintf(FOUT, "PSG_VOLUME|");
+                        fprintf(FOUT, "0x%02x,", command & 0b00001111);
                     } else {
-                        if (vgm_opt.channel_enabled[last_channel]) fprintf(FOUT, "0x%02x,", command);
+                        fprintf(FOUT, "0x%02x,", command);
                     }
                 }
 
                 fprintf(FOUT, "\n");
 
-                // reset row
+                // reset row and count
                 row_count = 0;
+                count = 0;
 
                 if (cmd == CMD_END_SND_DATA) {
                     // write terminate sequence and exit

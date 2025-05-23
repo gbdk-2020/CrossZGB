@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "Vector.h"
 #include "Scroll.h"
 #include "Sprite.h"
 #include "SpriteManager.h"
@@ -96,7 +97,7 @@ void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
 			static UINT16 id;
 			static UINT8 i;
 			id = SPRITE_UNIQUE_ID(x, y);
-			for (i = sprite_manager_updatables[0]; (i != 0); i--) {
+			for (i = VECTOR_LEN(sprite_manager_updatables); (i); i--) {
 				Sprite* s = sprite_manager_sprites[sprite_manager_updatables[i]];
 				if ((s->type == type) && (s->unique_id == id)) {
 					break;
@@ -474,24 +475,5 @@ void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT8* tiles_w, UINT8
 	if (tiles_w) *tiles_w = map->width;
 	if (tiles_h) *tiles_h = map->height;
 	SWITCH_ROM(__save);
-}
-
-UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile, UINT8 start_x, UINT8 start_y, UINT8 w, UINT8 h, UINT16* x, UINT16* y) {
-	UINT8 __save = CURRENT_BANK;
-	SWITCH_ROM(map_bank);
-	for (UINT16 xt = start_x; xt != start_x + w; ++ xt) {
-		for (UINT16 yt = start_y; yt != start_y + h; ++ yt) {
-			if (map->data[map->width * yt + xt] == tile) {
-				*x = xt;
-				*y = yt;
-				SWITCH_ROM(__save);
-				return 1;
-			}
-		}
-	}
-	SWITCH_ROM(__save);
-
-	*x = *y = 0;
-	return 0;
 }
 

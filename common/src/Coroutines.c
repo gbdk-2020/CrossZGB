@@ -125,8 +125,8 @@ bool coro_finalize(void) NONBANKED NAKED {
 	__endasm;
 }
 
-void coro_init(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data) NONBANKED {
-	uint16_t * stack = context->stack + ((CORO_STACK_SIZE >> 1) - 1);
+void coro_init(coro_context_t * context, coro_t coro, uint8_t coro_bank, void * user_data, uint16_t stack_size) NONBANKED {
+	uint16_t * stack = context->stack + ((stack_size >> 1) - 1);
 	*stack = (uint16_t)user_data;
 #if defined(__TARGET_gb) || defined(__TARGET_ap) || defined(__TARGET_duck)
 	stack = (uint16_t *)((uint8_t *)stack - 6); // match SM83 banked call convention

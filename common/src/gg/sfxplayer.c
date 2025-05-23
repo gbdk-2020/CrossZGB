@@ -44,8 +44,10 @@ __asm
         ld a, (hl)
         inc hl
         and d
-        ld b, a                     ; d = frame channel count
-        jp z, 0$
+        ld b, a                     ; b = frame channel count
+        jp z, 0$                    ; length 0 == terminator
+	cp d
+	jp z, 0$                    ; length 0x0f == empty row
 
         ld c, #_PSG
         otir
@@ -79,7 +81,7 @@ void sfx_sound_cut_mask(uint8_t mask) NAKED {
     __asm
         and #0b00001111
         ret z                       ; if nothing to retrigger then return
-        ld c, #<_PSG                ; c points to the PSG port
+        ld c, #_PSG                 ; c points to the PSG port
         ld hl, #2$                  ; hl points to the muting data
 0$:
         srl a

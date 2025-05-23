@@ -4,7 +4,7 @@
 #include "Coroutines.h"
 #include "Keys.h"
 #include "ZGBMain.h"
-#include "scroll.h"
+#include "Scroll.h"
 #include "Vector.h"
 
 // player sprite pointer

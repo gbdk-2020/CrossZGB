@@ -37,7 +37,7 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 #else
 	sprite->attr_add = 0;
 #endif
-	sprite->anim_data = 0u;
+	sprite->anim_data = NULL;
 	
 	SetFrame(sprite, 0);
 
