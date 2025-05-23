@@ -37,14 +37,19 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 #else
 	sprite->attr_add = 0;
 #endif
-	sprite->anim_data = 0u;
+	sprite->anim_data = NULL;
 	
 	SetFrame(sprite, 0);
 
 	sprite->anim_speed = 33u;
 
+	sprite->ctx = NULL;
+
 	sprite->x = 0;
 	sprite->y = 0;
+
+	sprite->coll_group = COLL_GROUP_DEFAULT;
+	sprite->coll_group_down = COLL_GROUP_DOWN;
 
 	sprite->visible = 1u;
 
@@ -128,7 +133,7 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 	INT16 pivot_x, pivot_y;
 	UINT8 start_tile_x, end_tile_x;
 	UINT8 start_tile_y, end_tile_y;
-	UINT8* scroll_coll_v;
+	UINT8 scroll_coll_group;
 	UINT8 tmp;
 	if (x) {
 		if (x > 0) {
@@ -175,8 +180,9 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 		SWITCH_ROM(scroll_bank);
 		tile_coll = scroll_map + (scroll_tiles_w * start_tile_y + start_tile_x);
 		end_tile_y ++;
+		scroll_coll_group = sprite->coll_group;
 		for(tmp = start_tile_y; tmp != end_tile_y; tmp ++, tile_coll += scroll_tiles_w) {
-			if(scroll_collisions[*tile_coll] == 1u) {
+			if(scroll_collisions[*tile_coll] & scroll_coll_group) {
 				if(x > 0) {
 					sprite->x = (start_tile_x << 3) - sprite->coll_w;
 				} else {
@@ -240,9 +246,9 @@ done_x:
 		SWITCH_ROM(scroll_bank);
 		tile_coll = scroll_map + (scroll_tiles_w * start_tile_y + start_tile_x);
 		end_tile_x ++;
-		scroll_coll_v = y < 0 ? scroll_collisions : scroll_collisions_down;
+		scroll_coll_group = y < 0 ? sprite->coll_group : sprite->coll_group_down;
 		for(tmp = start_tile_x; tmp != end_tile_x; tmp ++, tile_coll += 1) {
-			if(scroll_coll_v[*tile_coll] == 1u) {
+			if(scroll_collisions[*tile_coll] & scroll_coll_group) {
 				if(y > 0) {
 					sprite->y = (start_tile_y << 3) - sprite->coll_h;
 				} else {

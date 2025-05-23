@@ -26,6 +26,50 @@ It uses [GBDK 2020](https://github.com/gbdk-2020/gbdk-2020/releases/latest) but 
 ## Examples
 See the included basic [example projects](/examples) as well as the [Made with CrossZGB](https://github.com/gbdk-2020/CrossZGB/wiki/Made-with-CrossZGB) Wiki page for source code and demonstrations of how to target multiple platforms and use other features of the engine.
 
+<details>
+  <summary><strong>List of Examples</strong></summary>
+
+### Template
+Basic template project to use as a starting point for your own project or following the tutorial.
+
+#### Aiming
+How to aim and shoot a projectile using the Bresenham algorithm.
+
+#### Animation
+Character sprite animation with directional movement.
+
+#### Banjo
+How to use the Banjo Music driver for SMS/Game Gear consoles.
+
+#### Coroutines
+Shows how to aim and shoot a projectile using the Bresenham algorithm, running the bullet logic using the coroutines feature.
+
+#### Hicolor
+Uses the "hi-color" feature to display background images with thousands of colors on the Game Boy Color, useful for title screens, menus, cut scenes.
+
+#### Multiplayer
+Control two players with separate input on consoles which support two joypads.
+
+#### Pacman
+A more advanced coroutine example of the "pacman" game, which is using coroutines to run the ghost logic.
+
+#### Platform
+An example of physics and collision detection for a platformer style game.
+
+#### Print
+Basic text printing demo.
+
+#### psglib
+How to use the PSGLib driver for playing music on the SMS/GG systems.
+
+#### Tileupdate
+Shows how to load and replace tile data in-place to animate the player sprite instead of using the native CrossZGB sprite animation feature which loads multiple frames to vram.
+
+#### VWF 
+Contains the VWF library which allows to output the text using the proportional fonts.
+</details>
+<!-- END EXAMPLES SUBSECTION -->
+
 ## Documentation
 Check the [wiki](https://github.com/gbdk-2020/CrossZGB/wiki) and this README
 
@@ -224,6 +268,141 @@ Creating mirrored copies of the sprites occupy additional space in VRAM.
 
 ---
 </details>
+
+
+<!-- START COROUTINE SUBSECTION -->
+<details>
+  <summary><strong>Sprite Coroutines</strong></summary>
+
+CrossZGB has built in support for coroutines. These are functions which execute using cooperative multi-tasking, so they can run and then pause themselves (yield) until they are called again. They can be useful for writing enemy or player sprite logic in a more natural way than typically used with the zgb `UPDATE()` approach.
+
+**Notes**
+- Coroutine functions may be shared across multiple zgb sprite types, or distinct ones may be used per zgb sprite.
+- Regular ZGB sprites can be mixed with those using coroutines, there is no requirement to use all of one kind or another.
+- If too many coroutine-driven sprites are spawned and all coroutine contexts are currently used up then a new sprite (which uses coroutines) will fail to spawn.
+- Stack usage may vary slightly on z80 and sm83 targets
+- If none of the coroutine macros are used then the coroutine code will not be linked into the program, and the coroutine memory pool will not be allocated.
+
+
+**Sprite contexts**
+
+If a sprite coroutine is called from within the sprite `UPDATE()` handler only, then `THIS` and `THIS_IDX` will be valid within the coroutine and may be used.
+
+
+<details>
+<summary>CPU Stack</summary>
+
+Each coroutine has it's own small CPU stack (`96` bytes default) with space for:
+- A few local variables
+- Storage of the return addresses and parameters of function calls and any function sub-calls they might make.
+- Any interrupts that might trigger during coroutine execution
+
+So keep in mind that it's easy to overflow the stack by defining even small local arrays in the coroutine or doing function sub-calls which consume too much stack space.
+
+**Memory Usage**
+
+The number of contexts can be changed by defining `CORO_MAX_CONTEXTS` with a value in the `ZGBMain.h`.
+- For example `#define CORO_MAX_CONTEXTS 8` to change the number of coroutines allocated to `8`.
+
+The size of the coroutine stacks can also be changed using `CORO_STACK_SIZE` in a similar way.
+- For example `#define CORO_STACK_SIZE 128` to change the size of the coroutine stacks to `128` bytes.
+- **Warning:** Make sure there is sufficient memory for the stack, if the coroutine memory usage exceeds it's allocated stack size there will either be a crash or memory corruption.
+
+For changing both values be mindful that the total memory used is `CORO_STACK_SIZE x CORO_STACK_SIZE`.
+
+</details>
+
+
+<details>
+<summary>Benefits / Disadvantages</summary>
+
+**Benefits**
+- Algorithms can be written in a natural "script-like" way. For example:
+  - "go 10 steps right, then jump, then go 10 steps right, then go 20 steps left..."
+- The lifetime of the sprite can be controlled by the flow of the coroutine function: to remove the sprite just `return` from the coroutine function.
+- Since each coroutine can have it's own local variables, per-sprite variable management can be more convenient than the zgb `CUSTOM_DATA` per sprite approach.
+- Coroutines can be called from other coroutines like normal functions, so logic can be easily shared between sprites.
+
+**Disadvantages**
+- Coroutines require memory dedicated to them.
+  - Each coroutine context uses `96` statically allocated bytes.
+  - By default there are `16` contexts which means `16 x 96 bytes per stack = 1536 bytes` of memory used.
+  - See the `Stack` section about changing the default size and number of contexts.
+- The CPU stack for each coroutine is very small, so care is needed to avoid overflowing the stack and causing a crash or memory corruption.
+</details>
+
+
+<details>
+  <summary>Examples</summary>
+There are two CrossZGB examples of using coroutines.
+
+A basic one using coroutines to move bullet sprites for a fixed number of frames:
+- `examples/coroutines`
+  - `SpriteBullet.c` is the bullet zgb sprite which initializes and calls the bullet logic coroutine.
+
+A more advanced example where the AI logic coroutines are shared between Pacman ghosts:
+- `examples/pacman`
+  - `SpritePlayer.c` is the player zgb sprite which initializes and calls the player coroutine.
+  - `SpriteBlinky.c, etc.` are the ghost zgb sprites which initialize and call into the ghost ai coroutines.
+  - `ai.c` contains shared ai logic co-routines for the ghosts which get called from their Sprite `UPDATE()` functions.
+  - `lee.c` contains the pathfinding algorithm called from some of the ghost coroutines.
+</details>
+
+<details>
+<summary>Usage</summary>
+
+Here is a minimal example which declares a simple coroutine and calls it. The coroutine moves a sprite endlessly on the X axis.
+
+```C
+// File SpriteExample.c
+#include "Banks/SetAutoBank.h"
+#include <stdlib.h>
+#include "SpriteManager.h"
+#include "Keys.h"
+#include "ZGBMain.h"
+
+#include "Coroutines.h"
+
+// This is the sprite's logic coroutine
+// Since we are calling the sprite coroutine from within the UPDATE handler only, THIS and THIS_IDX are valid
+void SpriteExampleLogic(void * custom_data) BANKED {
+    custom_data;
+
+    // Initialize any coroutine local variables
+    INT16 dx  = 1;  // Amount to move sprite by
+
+    // In this case, loop forever, but the loop may be exited
+    // or returned from after which the sprite would be removed
+    while(1) {
+        // Perform sprite operations
+        THIS->x += dx;  // Move sprite X position by dx amount
+
+        // And then pause/yield coroutine execution until called again
+        YIELD;
+    }
+}
+
+void START(void) {
+    // allocate coroutine context
+    INIT_CORO(BANK(SpriteExample), SpriteExampleLogic);
+}
+
+void UPDATE(void) {
+    // iterate coroutine
+    ITER_CORO;
+}
+
+void DESTROY(void) {
+    // deallocate coroutine context
+    FREE_CORO;
+}
+```
+</details>
+
+---
+</details>
+<!-- END COROUTINE SUBSECTION -->
+
 
 <details>
   <summary><strong>Big maps scroll support</strong></summary>
@@ -478,6 +657,64 @@ void START() {
 
 ---
 </details>
+<!-- START GBC HICOLOR SUBSECTION -->
+<details>
+  <summary><strong> Game Boy Color "Hi Color" backgrounds</strong></summary>
+The "Hi Color" feature can displays background images with thousands of colors on the Game Boy Color, useful for title screens, menus, cut scenes, etc.
+
+Follow the next steps to create and display a Hi Color background in your game
+- Create the folder `res/hicolor/gbc`
+- Add a png image with these limitations:
+  - The width must be 160 pixels wide
+  - The height must be between 8 and 200 pixels tall (in even multiples of 8)
+  - There is not a limit to the number of colors or unique tiles of the source image, however they will get reduced to the supported amount with some visual artifacts. Vertical Gradients tend to work better than horizontal.
+- Create a matching .png.meta type file with the same filename and any options for converting the image. The standard options are `--type=1 -L=1 -R=1`
+
+Here is an example of displaying a background (with some extras such as scrolling)
+```C
+#include "Banks/SetAutoBank.h"
+#include "Keys.h"
+#include "ZGBMain.h"
+
+// The imported variable name here should match the filename
+IMPORT_HICOLOR(your_hicolor_image_name_here);
+UINT8 scroll_limit;
+
+void START(void) {
+	// Uninstall the standard LCD routine (used for the overlay window)
+	LCD_uninstall();
+	// Disable fading between the state transitions
+	fade_enabled = FALSE;
+	// Initialize the internal scroll position variables
+	scroll_y = scroll_x = 0;
+	// Start displaying the Hi Color image
+	scroll_limit = HICOLOR_START(your_hicolor_image_name_here);
+}
+
+void UPDATE(void) {
+	// Scrolling is optional and only for images taller than 144 pixels
+	//
+	// Scroll image up and down with keys within the scroll limits
+	if (KEY_PRESSED(J_UP | J_A)) {
+		if (scroll_y) scroll_y--;
+	} else if (KEY_PRESSED(J_DOWN | J_B)) {
+		if (scroll_y < scroll_limit) scroll_y++;
+	}
+}
+
+void DESTROY(void) {
+	// Stop displaying the Hi Color image
+	HICOLOR_STOP;
+	// reinstall the standard LCD routine
+	LCD_install();
+	// Re-enable fading
+	fade_enabled = TRUE;
+}
+```
+
+---
+</details>
+<!-- END GBC HICOLOR SUBSECTION -->
 
 <details>
   <summary><strong>Savegame support</strong></summary>

@@ -28,6 +28,19 @@ VIBRATO_OFF         = 0x0d
 LEGATO_ON           = 0x0e
 LEGATO_OFF          = 0x0f
 GAME_GEAR_PAN       = 0x10
+AY_ENV_ON           = 0x11
+AY_ENV_OFF          = 0x12
+AY_ENV_SHAPE        = 0x13
+AY_ENV_PERIOD_HI    = 0x14
+AY_ENV_PERIOD_LO    = 0x15
+AY_CHANNEL_MIX      = 0x16
+AY_NOISE_PITCH      = 0x17
+AY_ENV_PERIOD_WORD  = 0x18
+ORDER_JUMP          = 0x19
+SET_SPEED_1         = 0x1a
+SET_SPEED_2         = 0x1b
+ORDER_NEXT          = 0x1c
+NOTE_DELAY          = 0x1d
 END_LINE            = 0x80
 
 INSTRUMENT_SIZE     = 16
@@ -37,13 +50,59 @@ CHIP_SN76489        = 0x03      # 0x03: SMS (SN76489) - 4 channels
 CHIP_SN76489_OPLL   = 0x43      # 0x43: SMS (SN76489) + OPLL (YM2413) - 13 channels (compound!)
 CHIP_OPLL           = 0x89      # 0x89: OPLL (YM2413) - 9 channels
 CHIP_OPLL_DRUMS     = 0xa7      # 0xa7: OPLL drums (YM2413) - 11 channels
+CHIP_AY_3_8910      = 0x80      # AY-3-8910 - 3 channels
 
 CHAN_SN76489        = 0x00
 CHAN_OPLL           = 0x01
 CHAN_OPLL_DRUMS     = 0x02
+CHAN_AY_3_8910      = 0x03
+
+BANJO_HAS_SN        = 0x01
+BANJO_HAS_OPLL      = 0x02
+BANJO_HAS_AY        = 0x04
+BANJO_HAS_DUAL_SN   = 0x08
+BANJO_HAS_GG        = 0x10
+
+MACRO_TYPE_VOLUME   = 0
+MACRO_TYPE_ARP      = 1
+MACRO_TYPE_DUTY     = 2
+MACRO_TYPE_WAVE     = 3
+MACRO_TYPE_PITCH    = 4
+MACRO_TYPE_EX1      = 5
+
+macro_type_lookup = {
+    0: "MACRO_TYPE_VOLUME",
+    1: "MACRO_TYPE_ARP",
+    2: "MACRO_TYPE_DUTY",
+    3: "MACRO_TYPE_WAVE",
+    4: "MACRO_TYPE_PITCH",
+    5: "MACRO_TYPE_EX1",
+}
 
 # whether the drum channel needs its volume to be pre-shifted
 pre_shift_fm_drum_value = [0,0,4,0,4]
+
+def ay_pitch_fnum(note, octave):
+    
+    freq = pow(2.0, ((note + ((octave + 2) * 12) - 69.0)/12.0)) * 440.0
+    fnum = 3579545.0 / (2 * 8 * freq)
+
+    return int(fnum)
+
+def ay_envelope_period(fnum, numerator, denominator):
+
+    # calculate envelope period from the fnum
+    period = ((fnum * denominator) / numerator) / 16
+    period = int(period)
+
+    # make sure period is a valid value
+    if period > 0xffff:
+        period = 0xffff
+    elif period < 1:
+        period = 1
+
+    return period
+
 
 def int_def(v, d):
     try:
@@ -61,6 +120,8 @@ def main(argv=None):
 
     parser.add_option("-b", '--bank',       dest='bank',                                             help='BANK number')
     parser.add_option("-a", '--area',       dest='area',                                             help='AREA name')
+
+    parser.add_option("", '--sdas',       dest='sdas',                                action="store_true",    help='SDAS assembler compatible output')
 
     (options, args) = parser.parse_args()
 
@@ -94,20 +155,20 @@ def main(argv=None):
         print("File is not a valid json file: " + in_filename, file=sys.stderr)
         sys.exit(1)
 
+    # calls which will be run to init chips
+    channel_init_calls = []
 
-    # flags to say which chips are active
-    song['has_sn'] = False
-    song['has_fm'] = False
-    song['has_fm_drums'] = False
+    # calls which will be run to mute chips
+    channel_mute_calls = []
 
-    if (CHIP_SN76489 in song['sound_chips']):
-        song['has_sn'] = True
+    # calls which will be run to update chips
+    channel_update_calls = []
 
-    if (CHIP_OPLL in song['sound_chips']):
-        song['has_fm'] = True
+    # calls which will be run to mute the entire song
+    song_mute_calls = []
 
-    if (CHIP_OPLL_DRUMS in song['sound_chips']):
-        song['has_fm_drums'] = True
+    # flags to say which chips are required by the song
+    song['has_chips'] = 0
 
     # channel types and channel numbers
     sn_count = 0
@@ -117,129 +178,259 @@ def main(argv=None):
 
         if (sound_chip == CHIP_SN76489):
 
+            # flag that we have an SN chip
+            song['has_chips'] |= BANJO_HAS_SN
+
+            # add init and mute functions to lists
+            if sn_count == 0:
+                channel_init_calls.append("banjo_init_sn")
+                song_mute_calls.append("banjo_mute_all_sn")
+            else:
+                channel_init_calls.append("banjo_init_sn_" + str(sn_count+1))
+                song_mute_calls.append("banjo_mute_all_sn_" + str(sn_count+1))
+                # also flag that we have a second SN chip 
+                song['has_chips'] |= BANJO_HAS_DUAL_SN
+
             for i in range(0, 4):
 
-                channel_types.append(CHAN_SN76489)
-                channel_types.append(i | (sn_count << 4))
+                channel_types.append({
+                    'type': CHAN_SN76489,
+                    'update': "banjo_update_channel_sn",
+                    'subchannel': (i | (sn_count << 4))
+                    })
+
+                channel_mute_calls.append("banjo_mute_channel_sn")
+
+            channel_update_calls.append("banjo_update_channels_sn")
 
             sn_count += 1
-
 
         elif (sound_chip == CHIP_OPLL):
 
+            # flag that we have an OPLL chip
+            song['has_chips'] |= BANJO_HAS_OPLL
+
+            # add init and mute functions to lists
+            channel_init_calls.append("banjo_init_opll")
+            song_mute_calls.append("banjo_mute_all_opll")
+
             for i in range(0, 9):
 
-                channel_types.append(CHAN_OPLL)
-                channel_types.append(i)
+                channel_types.append({
+                    'type': CHAN_OPLL,
+                    'update': "banjo_update_channel_opll",
+                    'subchannel': i
+                    })
+
+                channel_mute_calls.append("banjo_mute_channel_opll")
+
+            channel_update_calls.append("banjo_update_channels_opll")
 
         elif (sound_chip == CHIP_OPLL_DRUMS):
 
+            # flag that we have an OPLL chip
+            song['has_chips'] |= BANJO_HAS_OPLL
+
+            # add init and mute functions to lists
+            channel_init_calls.append("banjo_init_opll_drums")
+            song_mute_calls.append("banjo_mute_all_opll_drums")
+
             for i in range(0, 6):
 
-                channel_types.append(CHAN_OPLL)
-                channel_types.append(i)
+                channel_types.append({
+                    'type': CHAN_OPLL,
+                    'update': "banjo_update_channel_opll",
+                    'subchannel': i
+                    })
+                
+                channel_mute_calls.append("banjo_mute_channel_opll")
 
             for i in range(0, 5):
 
-                channel_types.append(CHAN_OPLL_DRUMS)
-                channel_types.append(i)
+                channel_types.append({
+                    'type': CHAN_OPLL_DRUMS,
+                    'update': "banjo_update_channel_opll_drums",
+                    'subchannel': i
+                    })
+
+                channel_mute_calls.append("banjo_mute_channel_opll_drums")
+
+            channel_update_calls.append("banjo_update_channels_opll_drums")
 
         elif (sound_chip == CHIP_SN76489_OPLL):
 
+            # flag that we have an SN and OPLL chip
+            song['has_chips'] |= (BANJO_HAS_SN | BANJO_HAS_OPLL)
+
+            # add init and mute functions to lists
+            channel_init_calls.append("banjo_init_sn")
+            channel_init_calls.append("banjo_init_opll")
+            song_mute_calls.append("banjo_mute_all_sn")
+            song_mute_calls.append("banjo_mute_all_opll")
+
             for i in range(0, 4):
 
-                channel_types.append(CHAN_SN76489)
-                channel_types.append(i | (sn_count << 4))
+                channel_types.append({
+                    'type': CHAN_SN76489,
+                    'update': "banjo_update_channel_sn",
+                    'subchannel': (i | (sn_count << 4))
+                    })
+
+                channel_mute_calls.append("banjo_mute_channel_sn")
 
             for i in range(0, 9):
 
-                channel_types.append(CHAN_OPLL)
-                channel_types.append(i)
+                channel_types.append({
+                    'type': CHAN_OPLL,
+                    'update': "banjo_update_channel_opll",
+                    'subchannel': i
+                    })
 
+                channel_mute_calls.append("banjo_mute_channel_opll")
+
+            channel_update_calls.append("banjo_update_channels_sn")
+            channel_update_calls.append("banjo_update_channels_opll")
 
             sn_count += 1
+
+        elif (sound_chip == CHIP_AY_3_8910):
+
+            # flag that we have an AY chip
+            song['has_chips'] |= BANJO_HAS_AY
+
+            # add init and mute functions to lists
+            channel_init_calls.append("banjo_init_ay")
+            song_mute_calls.append("banjo_mute_all_ay")
+            
+            for i in range(0, 3):
+
+                channel_types.append({
+                    'type': CHAN_AY_3_8910,
+                    'update': "banjo_update_channel_ay",
+                    'subchannel': i
+                    })
+
+                channel_mute_calls.append("banjo_mute_channel_ay")
+
+            channel_update_calls.append("banjo_update_channels_ay")
 
     # in sfx mode, only include channel_types for the specified sfx channel
     if (sfx):
 
-        new_channel_types = [0, 0]
+        channel_types = [channel_types[sfx_channel]]
+        sfx_subchannel = channel_types[0]["subchannel"]
+        sfx_type = channel_types[0]["type"]
 
-        new_channel_types[0] = channel_types[(sfx_channel * 2)]
-        new_channel_types[1] = channel_types[(sfx_channel * 2) + 1]
+        channel_update_calls = [channel_types[0]["update"]]
 
-        channel_types = new_channel_types
+        if sfx_type == CHAN_OPLL:
+            channel_init_calls = ["banjo_init_sfx_channel_opll"]
+            song_mute_calls = ["banjo_mute_all_opll"]
 
+        elif sfx_type == CHAN_SN76489:
+            channel_init_calls = ["banjo_init_sfx_channel_sn"]
+            song_mute_calls = ["banjo_mute_all_sn"]
 
-    # fill out channel types array
-    for i in range (0, 32 - len(channel_types)):
-
-        channel_types.append(0xff)
+        elif sfx_type == CHAN_AY_3_8910:
+            channel_init_calls = ["banjo_init_sfx_channel_ay"]
+            song_mute_calls = ["banjo_mute_all_ay"]
 
     # process instruments
-
-    instrument_offsets = [0x0000]
     instruments = []
 
-    volume_macros = []
+    macros = {}
+    fm_patches = {}
 
     for i in range(0, len(song['instruments'])):
 
         instrument = song['instruments'][i]
-        instrument_bin = []
 
-        # organise volume macro data
-        if ("volume_macro" in instrument):
+        new_instrument = {
+            "volume_macro_len": 0,
+            "volume_macro_loop": 0xff,
+            "volume_macro_ptr": 0xffff,
 
-            instrument_bin.append(instrument['volume_macro']['length'])
+            "ex_macro_type": 0,
+            "ex_macro_len": 0,
+            "ex_macro_loop": 0xff,
+            "ex_macro_ptr": 0xffff,
 
-            # if loop == 0xff, there's no looping
-            if (instrument['volume_macro']['loop'] == 0xff):
-                instrument_bin.append(instrument['volume_macro']['loop'])
+            "fm_patch": 0xff,
+            "fm_patch_ptr": 0xffff,
+        }
 
-            # loop position >= loop length is invalid
-            elif (instrument['volume_macro']['loop'] >= instrument['volume_macro']['length']):
-                instrument_bin.append(0xff)
+        # macros
+        for macro in instrument["macros"]:
 
-            # otherwise we do: loop = loop length - loop point
-            # so when the loop ends we can do
-            #   loop pointer -= loop value
-            #   loop position -= loop value
-            # to go to the start of the loop
-            else:
-                instrument_bin.append(instrument['volume_macro']['length'] - instrument['volume_macro']['loop'])
+            if macro["loop"] != 0xff and macro["loop"] >= macro["length"]:
+                macro["loop"] = 0xff
 
-            # index of the volume macro
-            instrument_bin.append(len(volume_macros))
+            # volume macro
+            if macro["code"] == MACRO_TYPE_VOLUME:
 
-            # invert volume data so 0 is loud and 15 is silent
-            for j in range(0, len(instrument['volume_macro']['data'])):
+                new_instrument["volume_macro_len"] = macro["length"]
+                new_instrument["volume_macro_loop"] = macro["loop"]
 
-                instrument['volume_macro']['data'][j] = 15 - instrument['volume_macro']['data'][j]
+                for j in range(0, macro["length"]):                     
+                    macro['data'][j] = 15 - macro['data'][j]
 
+                macro_data_name = "macro_volume_" + str(i)
+                macros[macro_data_name] = macro['data']
+                new_instrument["volume_macro_ptr"] = macro_data_name
 
-            # add macro data to separate arrays and set up offset of next volume macro (if there is one)
-            volume_macros.append(instrument['volume_macro']['data'])
+            # currently no ex macro for this instrument
+            elif new_instrument["ex_macro_ptr"] == 0xffff:
 
-        # no volume_macro
-        else:
+                new_instrument["ex_macro_type"] = macro_type_lookup[macro["code"]] if macro["code"] in macro_type_lookup else macro["code"]
+                new_instrument["ex_macro_len"] = macro["length"]
+                new_instrument["ex_macro_loop"] = macro["loop"]
 
-            instrument_bin.append(0)
-            instrument_bin.append(0)
-            instrument_bin.append(0xffff)
+                if macro["code"] == MACRO_TYPE_ARP:
+                    for j in range(0, macro["length"]):
+                        val = macro['data'][j]
+
+                        # get the absolute/relative flag in bit 7
+                        absolute = ((abs(val) >> 23) & 0x80)
+                        
+                        # constrain the arp amount to 7 bits
+                        macro['data'][j] = (macro['data'][j] & 0x7f) | absolute
+
+                # need to invert pitch offset for certain chips
+                if macro["code"] == MACRO_TYPE_PITCH and (instrument["type"] == 0 or instrument["type"] == 6):
+                    for j in range(0, macro["length"]):
+                        macro['data'][j] = -macro['data'][j]
+
+                # need to pre-shift fm patch for opll patch macro
+                if macro["code"] == MACRO_TYPE_WAVE and instrument["type"] == 13:
+                    for j in range(0, macro["length"]):
+                        macro['data'][j] = macro['data'][j] << 4
+
+                # need to invert duty for ay noise freq macro
+                if macro["code"] == MACRO_TYPE_DUTY and instrument["type"] == 6:
+                    for j in range(0, macro["length"]):
+                        macro['data'][j] = 0x1f - macro['data'][j]
+
+                # special case for sn noise duty, similar to SN_NOISE_MODE command
+                if macro["code"] == MACRO_TYPE_DUTY and instrument["type"] == 0:
+                    for j in range(0, macro["length"]):
+                        duty = macro['data'][j]
+                        noise_mode = (duty & 0x1) << 2
+                        noise_freq = 0x3 if (duty & 0x2) else 0x0
+                        macro['data'][j] = 0x80 | (0x3 << 5) | noise_mode | noise_freq
+
+                macro_data_name = "macro_ex_" + str(i)
+                macros[macro_data_name] = macro['data']
+                new_instrument["ex_macro_ptr"] = macro_data_name
+
 
         # FM preset change (only for OPLL FM instruments)
         if (instrument['type'] == 13 and "fm" in instrument):
-
-            print(instrument['name'])
-            print("instr type: " + str(instrument['type']))
-            print("patch: " + str(instrument['fm']['opll_patch']))
-            print("----")
 
             # custom fm patch data
             if (instrument['fm']['opll_patch'] == 0):
 
                 # pre-shift the patch number into the upper nibble
-                instrument_bin.append((instrument['fm']['opll_patch'] & 0xf) << 4)
+                new_instrument["fm_patch"] = (instrument['fm']['opll_patch'] & 0xf) << 4
 
                 fm_patch = [0, 0, 0, 0, 0, 0, 0, 0]
                 operator = False
@@ -273,54 +464,40 @@ def main(argv=None):
                     fm_patch[6 + j] = operator['rr'] | (operator['sl'] << 4)
 
 
-                for j in range(0, 8):
-
-                    instrument_bin.append(fm_patch[j])
+                fm_patch_name = "fm_patch_" + str(i)
+                fm_patches[fm_patch_name] = fm_patch
+                new_instrument["fm_patch_ptr"] = fm_patch_name
 
 
             # custom drum patch with fixed pitch
             elif (instrument['fm']['opll_patch'] == 16):
 
                 # pre-shift the patch number into the upper nibble
-                instrument_bin.append(0xff if instrument['opl_drums']['fixed_freq'] else 0)
+                new_instrument["fm_patch"] = (0xff if instrument['opl_drums']['fixed_freq'] else 0)
 
-                instrument_bin.append(instrument['opl_drums']['kick_freq'] & 0xff)
-                instrument_bin.append(instrument['opl_drums']['kick_freq'] >> 8)
+                fm_patch = []
 
-                instrument_bin.append(instrument['opl_drums']['snare_hat_freq'] & 0xff)
-                instrument_bin.append(instrument['opl_drums']['snare_hat_freq'] >> 8)
+                fm_patch.append(instrument['opl_drums']['kick_freq'] & 0xff)
+                fm_patch.append(instrument['opl_drums']['kick_freq'] >> 8)
 
-                instrument_bin.append(instrument['opl_drums']['tom_top_freq'] & 0xff)
-                instrument_bin.append(instrument['opl_drums']['tom_top_freq'] >> 8)
+                fm_patch.append(instrument['opl_drums']['snare_hat_freq'] & 0xff)
+                fm_patch.append(instrument['opl_drums']['snare_hat_freq'] >> 8)
 
-                instrument_bin.append(0xff)
-                instrument_bin.append(0xff)
+                fm_patch.append(instrument['opl_drums']['tom_top_freq'] & 0xff)
+                fm_patch.append(instrument['opl_drums']['tom_top_freq'] >> 8)
 
+                fm_patch_name = "fm_patch_" + str(i)
+                fm_patches[fm_patch_name] = fm_patch
+                new_instrument["fm_patch_ptr"] = fm_patch_name
 
-            # using a standard preset so no extra fm data
             else:
 
                 # pre-shift the patch number into the upper nibble
-                instrument_bin.append((instrument['fm']['opll_patch'] & 0xf) << 4)
+                new_instrument["fm_patch"] = (instrument['fm']['opll_patch'] & 0xf) << 4
 
-                for j in range(0, 8):
-
-                    instrument_bin.append(0xff)
-
-        # not an FM instrument
-        else:
-
-            instrument_bin.append(0xff)
-
-            for j in range(0, 8):
-
-                instrument_bin.append(0xff)
-
-        instruments.append(instrument_bin)
-        instrument_offsets.append(instrument_offsets[i] + INSTRUMENT_SIZE)
+        instruments.append(new_instrument)
 
     # process patterns
-
     patterns = {}
 
     # process patterns
@@ -332,24 +509,30 @@ def main(argv=None):
 
             continue
 
-        channel_type = channel_types[i * 2]
-        channel_subchannel = channel_types[(i * 2) + 1]
-
         # only one channel for sfx
         if (sfx):
 
             channel_type = channel_types[0]
-            channel_subchannel = channel_types[1]
 
+        else:
 
+            channel_type = channel_types[i]
+
+        channel_subchannel = channel_type['subchannel']
+        
         # separate pattern arrays per channel
         patterns[i] = {}
 
-        current_inst = -1
-        current_vol = -1
-
         # go through each pattern in the channel
         for j in range (0, len(song['patterns'][i])):
+
+            # keep track of the current instrument
+            # so we don't have multiple INSTRUMENT_CHANGEs per note
+            # when the instrument is exactly the same
+            # reset at a pattern level as patterns may appear out of order
+            # or be jumped to
+            current_inst = -1
+            current_vol = -1
 
             pattern = song['patterns'][i][j]
 
@@ -357,78 +540,86 @@ def main(argv=None):
 
             if (pattern):
 
+                last_note = { "note": -1, "octave": -1 }
+                ay_envelope_auto = False
+
                 # go through every line
                 for k in range (0, song['pattern_length']):
 
                     line = pattern['data'][k]
+
+                    note = { "note": line['note'], "octave": line['octave'] }
 
                     # instrument has changed
                     if (current_inst != line['instrument'] and line['instrument'] != -1):
 
                         current_inst = line['instrument']
 
-                        if (channel_type == CHAN_OPLL_DRUMS):
+                        # ensure the instrument exists so we don't load
+                        # other data as an instrument
+                        if current_inst < len(instruments):
 
-                            pattern_bin.append("FM_DRUM")
-                            pattern_bin.append(current_inst)
+                            if (channel_type['type'] == CHAN_OPLL_DRUMS):
 
-                        else:
+                                pattern_bin.append(FM_DRUM)
+                                pattern_bin.append(current_inst)
 
-                            pattern_bin.append("INSTRUMENT_CHANGE")
-                            pattern_bin.append(current_inst)
+                            else:
+
+                                pattern_bin.append(INSTRUMENT_CHANGE)
+                                pattern_bin.append(current_inst)
 
                     # check effects
                     for eff in range (0, len(line['effects']), 2):
 
                         # SN noise mode
-                        if (line['effects'][eff] == 0x20):
+                        if (line['effects'][eff] == 0x20 and channel_type['type'] == CHAN_SN76489):
 
-                            pattern_bin.append("SN_NOISE_MODE")
+                            pattern_bin.append(SN_NOISE_MODE)
 
                             noise_mode = (line['effects'][eff + 1] & 0x1) << 2
                             noise_freq = 0x3 if (line['effects'][eff + 1] & 0x10) else 0x0
 
                             pattern_bin.append(0x80 | (0x3 << 5) | noise_mode | noise_freq)
 
-
                         # Arpeggio
                         elif (line['effects'][eff] == 0x00):
 
                             if (line['effects'][eff + 1] != 0):
-                                pattern_bin.append("ARPEGGIO")
+                                pattern_bin.append(ARPEGGIO)
                                 pattern_bin.append(line['effects'][eff + 1])
                             else:
-                                pattern_bin.append("ARPEGGIO_OFF")
+                                pattern_bin.append(ARPEGGIO_OFF)
 
 
                         # Pitch slide up
                         elif (line['effects'][eff] == 0x01):
 
                             if (line['effects'][eff + 1] != 0):
-                                pattern_bin.append("SLIDE_UP")
+                                pattern_bin.append(SLIDE_UP)
                                 pattern_bin.append(line['effects'][eff + 1])
                             else:
-                                pattern_bin.append("SLIDE_OFF")
+                                pattern_bin.append(SLIDE_OFF)
 
 
                         # Pitch slide down
                         elif (line['effects'][eff] == 0x02):
 
                             if (line['effects'][eff + 1] != 0):
-                                pattern_bin.append("SLIDE_DOWN")
+                                pattern_bin.append(SLIDE_DOWN)
                                 pattern_bin.append(line['effects'][eff + 1])
                             else:
-                                pattern_bin.append("SLIDE_OFF")
+                                pattern_bin.append(SLIDE_OFF)
 
 
                         # Portamento
                         elif (line['effects'][eff] == 0x03):
 
                             if (line['effects'][eff + 1] != 0):
-                                pattern_bin.append("SLIDE_PORTA")
+                                pattern_bin.append(SLIDE_PORTA)
                                 pattern_bin.append(line['effects'][eff + 1])
                             else:
-                                pattern_bin.append("SLIDE_OFF")
+                                pattern_bin.append(SLIDE_OFF)
 
                         # Vibrato
                         elif (line['effects'][eff] == 0x04):
@@ -437,36 +628,184 @@ def main(argv=None):
                             vibrato_amount = line['effects'][eff + 1] & 0xf
 
                             if (vibrato_speed == 0 and vibrato_amount == 0):
-                                pattern_bin.append("VIBRATO_OFF")
+                                pattern_bin.append(VIBRATO_OFF)
 
                             else:
-                                pattern_bin.append("VIBRATO")
-                                pattern_bin.append(vibrato_speed  * (vibrato_amount + 1))
-                                pattern_bin.append(vibrato_amount)
-
-                        # Panning
-                        elif (line['effects'][eff] == 0x80):
-
-                            pattern_bin.append("GAME_GEAR_PAN")
-
-                            pan_left = (1 if (line['effects'][eff + 1] < 0xff) else 0) << (channel_subchannel + 4)
-                            pan_right = (1 if (line['effects'][eff + 1] > 0x00) else 0) << channel_subchannel
-
-                            pan_mask = (~(1 << channel_subchannel)) & 0xf
-
-                            pattern_bin.append(pan_left | pan_right)
-                            pattern_bin.append(pan_mask | (pan_mask << 4))
+                                pattern_bin.append(VIBRATO)
+                                pattern_bin.append(vibrato_speed)
+                                pattern_bin.append(vibrato_amount << 4)
 
                         # legato
                         elif (line['effects'][eff] == 0xea):
 
                             if (line['effects'][eff + 1] > 0):
 
-                                pattern_bin.append("LEGATO_ON")
+                                pattern_bin.append(LEGATO_ON)
 
                             else:
 
-                                pattern_bin.append("LEGATO_OFF")
+                                pattern_bin.append(LEGATO_OFF)
+
+                        # order jump
+                        elif (line['effects'][eff] == 0x0b):
+                            
+                            pattern_bin.append(ORDER_JUMP)
+                            pattern_bin.append(line['effects'][eff + 1])
+
+                        # order next
+                        elif (line['effects'][eff] == 0x0d):
+                            
+                            pattern_bin.append(ORDER_NEXT)
+
+                        # set speed 1
+                        elif (line['effects'][eff] == 0x09):
+                            
+                            pattern_bin.append(SET_SPEED_1)
+                            pattern_bin.append(line['effects'][eff + 1])
+
+                        # set speed 2
+                        elif (line['effects'][eff] == 0x0f):
+                            
+                            pattern_bin.append(SET_SPEED_2)
+                            pattern_bin.append(line['effects'][eff + 1])
+
+                        # note delay
+                        elif (line['effects'][eff] == 0xed):
+
+                            pattern_bin.append(NOTE_DELAY)
+                            pattern_bin.append(line['effects'][eff + 1])
+
+                        # sn modes
+                        if channel_type['type'] == CHAN_SN76489:
+
+                            # Panning
+                            if (line['effects'][eff] == 0x80):
+
+                                pattern_bin.append(GAME_GEAR_PAN)
+
+                                pan_left = (0 if (line['effects'][eff + 1] > 0x80) else 1) << (channel_subchannel + 4)
+                                pan_right = (0 if (line['effects'][eff + 1] < 0x80) else 1) << channel_subchannel
+
+                                pan_mask = (~(1 << channel_subchannel)) & 0xf
+
+                                pattern_bin.append(pan_left | pan_right)
+                                pattern_bin.append(pan_mask | (pan_mask << 4))
+
+                            # Panning
+                            if (line['effects'][eff] == 0x08):
+
+                                pattern_bin.append(GAME_GEAR_PAN)
+
+                                pan_left = (1 if (line['effects'][eff + 1] & 0xf0) else 0) << (channel_subchannel + 4)
+                                pan_right = (1 if (line['effects'][eff + 1] < 0x0f) else 0) << channel_subchannel
+
+                                pan_mask = (~(1 << channel_subchannel)) & 0xf
+
+                                pattern_bin.append(pan_left | pan_right)
+                                pattern_bin.append(pan_mask | (pan_mask << 4))
+
+
+                        # ay3 modes
+                        if channel_type['type'] == CHAN_AY_3_8910:
+
+                            if line['effects'][eff] == 0x20:
+
+                                # by default both noise and square enabled
+                                ay_bits = 0b00000000
+
+                                ay_mode = line['effects'][eff + 1]
+
+                                if ay_mode < 7:
+                                    
+                                    if ay_mode >= 3:
+                                        pattern_bin.append(AY_ENV_ON)
+                                    else:
+                                        pattern_bin.append(AY_ENV_OFF)
+                                    
+                                    # square only
+                                    if ay_mode == 0 or ay_mode == 4:
+                                        ay_bits = 0b00001000
+
+                                    # noise only
+                                    elif ay_mode == 1 or ay_mode == 5:
+                                        ay_bits = 0b00000001
+                                        
+                                    pattern_bin.append(AY_CHANNEL_MIX)
+                                    pattern_bin.append(ay_bits << channel_subchannel)
+
+                                # square, noise and env off
+                                elif ay_mode == 7:
+
+                                    ay_bits = 0b00001001
+
+                                    pattern_bin.append(AY_ENV_OFF)
+                                    pattern_bin.append(AY_CHANNEL_MIX)
+                                    pattern_bin.append(ay_bits << channel_subchannel)
+
+                            # ay envelope shape/enable for channel
+                            elif line['effects'][eff] == 0x22:
+
+                                pattern_bin.append(AY_ENV_SHAPE)
+                                pattern_bin.append(line['effects'][eff + 1] >> 4)
+
+                                # envelope on or off for this channel?
+                                if (line['effects'][eff + 1] & 0xf) > 0:
+                                    pattern_bin.append(AY_ENV_ON)
+                                else:
+                                    pattern_bin.append(AY_ENV_OFF)
+
+                            # ay envelope hi period byte
+                            elif line['effects'][eff] == 0x24:
+
+                                pattern_bin.append(AY_ENV_PERIOD_HI)
+                                pattern_bin.append(line['effects'][eff + 1])
+
+                            # ay envelope lo period byte
+                            elif line['effects'][eff] == 0x23:
+
+                                pattern_bin.append(AY_ENV_PERIOD_LO)
+                                pattern_bin.append(line['effects'][eff + 1])
+
+                            # ay envelope lo period byte
+                            elif line['effects'][eff] == 0x21:
+                                
+                                pattern_bin.append(AY_NOISE_PITCH)
+                                pattern_bin.append(0x1f - line['effects'][eff + 1])
+
+                            # ay envelope auto
+                            elif line['effects'][eff] == 0x29:
+
+                                # get effect numerator and denominator
+                                numerator = (line['effects'][eff + 1] >> 4) & 0xf
+                                denominator = line['effects'][eff + 1] & 0xf
+
+                                # check if we're switching the effect off
+                                if numerator == 0 or denominator == 0:
+
+                                    ay_envelope_auto = False
+
+                                # we're applying the effect
+                                else:
+
+                                    # keep the numerator and denominator around
+                                    ay_envelope_auto = { "numerator": numerator, "denominator": denominator}
+
+                                    # use fnum of new note
+                                    if note["note"] != -1 and note["octave"] != -1:
+
+                                        fnum = ay_pitch_fnum(note["note"], note["octave"])
+
+                                    # use fnum of last note
+                                    elif last_note["note"] != -1 and last_note["octave"] != -1:
+
+                                        fnum = ay_pitch_fnum(last_note["note"], last_note["octave"])
+
+                                    # get period
+                                    period = ay_envelope_period(fnum, numerator, denominator)
+
+                                    pattern_bin.append(AY_ENV_PERIOD_WORD)
+                                    pattern_bin.append(period & 0xff)
+                                    pattern_bin.append((period >> 8) & 0xff)
 
                     # volume
                     # if the volume has been specified on the line, or we haven't provided a volume command yet
@@ -478,20 +817,40 @@ def main(argv=None):
                         # volume has changed
                         if volume != current_vol:
 
-                            pattern_bin.append("VOLUME_CHANGE")
+                            pattern_bin.append(VOLUME_CHANGE)
 
                             # sn channel, this byte can be sent straight to the output to set the volume
-                            if (channel_type == CHAN_SN76489):
+                            if (channel_type['type'] == CHAN_SN76489):
 
-                                pattern_bin.append((15 - volume) | 0x80 | 0x10 | ((channel_subchannel & 0xf) << 5))
+                                # cap volume
+                                if volume > 15:
+                                    volume = 15
 
-                            elif (channel_type == CHAN_OPLL):
+                                pattern_bin.append(15 - volume)
 
+                            elif (channel_type['type'] == CHAN_OPLL):
+
+                                # cap volume
+                                if volume > 15:
+                                    volume = 15
+                                    
                                 pattern_bin.append((15 - volume))
 
-                            elif (channel_type == CHAN_OPLL_DRUMS):
+                            elif (channel_type['type'] == CHAN_OPLL_DRUMS):
+
+                                # cap volume
+                                if volume > 15:
+                                    volume = 15
 
                                 pattern_bin.append((15 - volume) << pre_shift_fm_drum_value[channel_subchannel])
+
+                            elif (channel_type['type'] == CHAN_AY_3_8910):
+                                
+                                # cap volume
+                                if volume > 15:
+                                    volume = 15
+
+                                pattern_bin.append(volume)
 
                         current_vol = volume
 
@@ -503,15 +862,30 @@ def main(argv=None):
                     # note on
                     elif (line['note'] >= 0 and line['note'] < 12):
 
-                        pattern_bin.append("NOTE_ON")
+                        pattern_bin.append(NOTE_ON)
 
                         # note number
-                        pattern_bin.append((line['note'] + (line['octave'] * 12)) & 0x7f)
+                        pattern_bin.append((note['note'] + (note['octave'] * 12)) & 0x7f)
+
+                        # store in last_note
+                        last_note = note
+
+                        # apply ay envelope auto if it's enabled
+                        if ay_envelope_auto != False:
+
+                            fnum = ay_pitch_fnum(last_note["note"], last_note["octave"])
+                            
+                            period = ay_envelope_period(fnum, ay_envelope_auto["numerator"], ay_envelope_auto["denominator"])
+
+                            pattern_bin.append(AY_ENV_PERIOD_WORD)
+                            pattern_bin.append(period & 0xff)
+                            pattern_bin.append((period >> 8) & 0xff)
+
 
                     # note off
-                    elif (line['note'] == 100):
+                    elif (line['note'] == 100 or line['note'] == 101):
 
-                        pattern_bin.append("NOTE_OFF")
+                        pattern_bin.append(NOTE_OFF)
 
 
                     # end line marker
@@ -522,7 +896,7 @@ def main(argv=None):
                 def run_end(run_length, pattern_bin_rle):
 
                     if (run_length > 0):
-                        pattern_bin_rle.append("(END_LINE | " + str(run_length - 1) + ")")
+                        pattern_bin_rle.append("(" + str(END_LINE) + " | " + str(run_length - 1) + ")")
 
 
                 # run length encoding for END_LINE
@@ -553,320 +927,293 @@ def main(argv=None):
     # output asm/h file
     outfile = open(str(out_filename), "w")
 
-    # asm format output
-    if (out_filename.suffix.lower() == ".asm"):
+    def writelabel(label):
 
-        def writelabel(label):
+        outfile.write(song_prefix + "_" + label + ":" + "\n")
 
-            outfile.write(song_prefix + "_" + label + ":" + "\n")
+    bank_number = str(options.bank) if (options.bank) else "0"
 
+    # sdas/sdcc mode
+    if (options.sdas):
 
-        # initial label
-        outfile.write(song_prefix + ":" + "\n")
+        # prefix song name with an underscore so it's accessible in C
+        song_prefix = "_" + song_prefix
 
-        # basic song data
-        writelabel("magic_byte")
-        outfile.write(".db " + str(MAGIC_BYTE) + "\n")
-        writelabel("bank")
-        outfile.write(".db 0\n")
-        writelabel("channel_count")
-        outfile.write(".db " + str(1 if sfx else song['channel_count']) + "\n")
-        writelabel("loop")
-        outfile.write(".db " + str(0 if sfx else 1) + "\n")
-        writelabel("sfx_channel")
-        outfile.write(".db " + str(sfx_channel if sfx else 0xff) + "\n")
-        writelabel("has_sn")
-        outfile.write(".db " + str(1 if song['has_sn'] else 0) + "\n")
-        writelabel("has_fm")
-        outfile.write(".db " + str(1 if song['has_fm'] else 0) + "\n")
-        writelabel("has_fm_drums")
-        outfile.write(".db " + str(1 if song['has_fm_drums'] else 0) + "\n")
-        writelabel("time_base")
-        outfile.write(".db " + str(song['time_base'] + 1) + "\n")
-        writelabel("speed_1")
-        outfile.write(".db " + str(song['speed_1']) + "\n")
-        writelabel("speed_2")
-        outfile.write(".db " + str(song['speed_2']) + "\n")
-        writelabel("pattern_length")
-        outfile.write(".db " + str(song['pattern_length']) + "\n")
-        writelabel("orders_length")
-        outfile.write(".db " + str(song['orders_length']) + "\n")
-        writelabel("instrument_ptrs")
-        outfile.write(".dw " + song_prefix + "_instrument_pointers" + "\n")
-        writelabel("order_ptrs")
-        outfile.write(".dw " + song_prefix + "_order_pointers" + "\n")
-        writelabel("subtic")
-        outfile.write(".db 0\n")
-        writelabel("tic")
-        outfile.write(".db 0\n")
-        writelabel("line")
-        outfile.write(".db 0\n")
-        writelabel("order")
-        outfile.write(".db 0\n")
-        writelabel("process_new_line")
-        outfile.write(".db 0\n")
-        writelabel("noise_mode")
-        outfile.write(".db 0\n")
-        writelabel("panning")
-        outfile.write(".db 0xff\n")
-        writelabel("channel_types")
-        outfile.write(".db " + ", ".join(map(str, channel_types)) + "\n")
+        # prefix asm calls song name with an underscore
+        channel_init_calls = list(map(lambda call: "_" + call, channel_init_calls))
+        channel_update_calls = list(map(lambda call: "_" + call, channel_update_calls))
+        channel_mute_calls = list(map(lambda call: "_" + call, channel_mute_calls))
+        song_mute_calls = list(map(lambda call: "_" + call, song_mute_calls))
 
-        outfile.write("\n" + "\n")
+        # set the module for this file so it flags up the file name in any errors
+        outfile.write(".module " + song_prefix + "\n")
 
-        # volume macros
-        writelabel("volume_macros")
+        # export the song label so it's accessible in C
+        outfile.write(".globl " + song_prefix + "\n")
 
-        for i in range (0, len(volume_macros)):
-
-            writelabel("volume_macro_" + str(i))
-
-            outfile.write(".db " + ", ".join(map(str, volume_macros[i])) + "\n")
-
-
-        # instruments
-        writelabel("instrument_pointers")
-
-        for i in range (0, len(instruments)):
-
-            outfile.write(".dw " + song_prefix + "_instrument_" + str(i) + "\n")
-
-
-        outfile.write("\n" + "\n")
-
-        # instruments
-        writelabel("instrument_data")
-
-        for i in range (0, len(instruments)):
-
-            instrument = instruments[i]
-
-            writelabel("instrument_" + str(i))
-            outfile.write("\t.db " + str(instrument[0]) + ", " + str(instrument[1]) + "\n")
-
-            # volume macro pointer
-            if (instrument[2] != 0xffff):
-
-                outfile.write("\t.dw " + song_prefix + "_volume_macro_" + str(instrument[2]) + "\n")
-
-            else:
-
-                outfile.write("\t.dw 0xffff" + "\n")
-
-            # fm preset
-            outfile.write("\t.db " + str(instrument[3]) + "\n")
-
-            # fm patch
-            outfile.write("\t.db " + ", ".join(map(str, instrument[4:12])) + "\n")
-
-
-        outfile.write("\n" + "\n")
-
-
-        # order pointers
-        writelabel("order_pointers")
-
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channel
-            if (sfx and i != sfx_channel):
-
-                continue
-
-
-            outfile.write("\t.dw " + song_prefix + "_orders_channel_" + str(i) + "\n")
-
-
-        # orders
-        writelabel("orders")
-
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channel
-            if (sfx and i != sfx_channel):
-
-                continue
-
-
-            writelabel("orders_channel_" + str(i))
-
-            for j in range (0, len(song['orders'][i])):
-
-                if (j % 4 == 0):
-
-                    outfile.write("\n" + "\t.dw ")
-
-
-                outfile.write(song_prefix + "_patterns_" + str(i) + "_" + str(song['orders'][i][j]))
-
-                if ((j % 4 != 3) and (j != len(song['orders'][i]) - 1)):
-
-                    outfile.write(", ")
-
-
-            outfile.write("\n")
-
-
-        outfile.write("\n" + "\n")
-
-        # patterns
-        writelabel("patterns")
-
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channelfs.
-            if (sfx and i != sfx_channel):
-
-                continue
-
-            for j in range (0, len(song["patterns"][i])):
-
-                pattern_index = song["patterns"][i][j]["index"]
-
-                writelabel("patterns_" + str(i) + "_" + str(pattern_index))
-                outfile.write(".db " + ", ".join(map(str, patterns[i][pattern_index])) + "\n")
-
-    # c format output
-    elif (out_filename.suffix.lower() == ".c"):
+        # area specified
         if (options.area):
-            outfile.write('#pragma constseg {:s}{:s}\n\n'.format(options.area, "_{:d}".format(int(options.bank)) if (options.bank) else ""))
-        elif (options.bank):
-            outfile.write('#pragma bank {:d}\n\n'.format(int(options.bank)))
 
-        outfile.write('#include "banjo.h"\n\n')
+            # postfix the area name with the bank number if available
+            outfile.write(".area _" + options.area + (str(options.bank) if options.bank else "") + "\n")
 
+        # bank specified
         if (options.bank):
-            outfile.write("const void __at(255) __bank_" + song_prefix + ";\n")
+            
+            # used for gbdk autobanking
+            outfile.write("___bank" + song_prefix + " .equ " + str(options.bank) + "\n")
+            outfile.write(".globl ___bank" + song_prefix + "\n")
+            bank_number = "___bank" + song_prefix
 
-        outfile.write("const song_data_t {:s} = {{\n".format(song_prefix))
-        outfile.write("\t.magic_byte=0x{:02x},\n".format(MAGIC_BYTE))
-        outfile.write("\t.bank={:d},\n".format(int(options.bank) if (options.bank) else 0))
-        outfile.write("\t.channel_count={:d},\n".format(1 if sfx else song['channel_count']))
-        outfile.write("\t.loop={:d},\n".format(0 if sfx else 1))
-        outfile.write("\t.sfx_channel={:d},\n".format(sfx_channel if sfx else 0xff))
-        outfile.write("\t.has_sn={:d},\n".format(1 if song['has_sn'] else 0))
-        outfile.write("\t.has_fm={:d},\n".format(1 if song['has_fm'] else 0))
-        outfile.write("\t.has_fm_drums={:d},\n".format(1 if song['has_fm_drums'] else 0))
-        outfile.write("\t.time_base={:d},\n".format(song['time_base'] + 1))
-        outfile.write("\t.speed_1={:d},\n".format(song['speed_1']))
-        outfile.write("\t.speed_2={:d},\n".format(song['speed_2']))
-        outfile.write("\t.pattern_length={:d},\n".format(song['pattern_length']))
-        outfile.write("\t.orders_length={:d},\n".format(song['orders_length']))
+        outfile.write("\n")
 
-        if len (instruments) > 0:
-            outfile.write("\t.instrument_pointers={:s}_instrument_pointers,\n".format(song_prefix))
+    # initial label
+    outfile.write(song_prefix + ":" + "\n")
 
-        outfile.write("\t.order_pointers={:s}_order_pointers,\n".format(song_prefix))
+    # basic song data
+    writelabel("magic_byte")
+    outfile.write(".db " + str(MAGIC_BYTE) + "\n")
+    writelabel("bank")
+    outfile.write(".db " + bank_number + "\n")
+    writelabel("channel_count")
+    outfile.write(".db " + str(1 if sfx else song['channel_count']) + "\n")
+    writelabel("flags")
+    outfile.write(".db " + str(0 if sfx else 2) + "\n")
+    writelabel("master_volume")
+    outfile.write(".db 0x80\n")
+    writelabel("master_volume_fade")
+    outfile.write(".db 0x00\n")
+    writelabel("has_chips")
+    outfile.write(".db " + str(song['has_chips']) + "\n")
+    writelabel("sfx_channel")
+    outfile.write(".db " + str(sfx_channel if sfx else 0xff) + "\n")
+    writelabel("sfx_subchannel")
+    outfile.write(".db " + str(sfx_subchannel if sfx else 0xff) + "\n")
+    writelabel("time_base")
+    outfile.write(".db " + str(song['time_base'] + 1) + "\n")
+    writelabel("speed_1")
+    outfile.write(".db " + str(song['speed_1']) + "\n")
+    writelabel("speed_2")
+    outfile.write(".db " + str(song['speed_2']) + "\n")
+    writelabel("pattern_length")
+    outfile.write(".db " + str(song['pattern_length']) + "\n")
+    writelabel("orders_length")
+    outfile.write(".db " + str(song['orders_length']) + "\n")
+    writelabel("instrument_ptrs")
+    outfile.write(".dw " + song_prefix + "_instrument_pointers" + "\n")
+    writelabel("order_ptrs")
+    outfile.write(".dw " + song_prefix + "_order_pointers" + "\n")
+    writelabel("subtic")
+    outfile.write(".db 0\n")
+    writelabel("tic")
+    outfile.write(".db 0\n")
+    writelabel("line")
+    outfile.write(".db 0\n")
+    writelabel("order")
+    outfile.write(".db 0\n")
+    writelabel("order_jump")
+    outfile.write(".db 0xff\n")
+    writelabel("noise_mode")
+    outfile.write(".db 0\n")
+    writelabel("panning")
+    outfile.write(".db 0xff\n")
 
-        outfile.write("\t.subtic=0,\n") # subtic
-        outfile.write("\t.tic=0,\n") # tic
-        outfile.write("\t.line=0,\n") # line
-        outfile.write("\t.order=0,\n") # order
-        outfile.write("\t.process_new_line=0,\n") # process_new_line
-        outfile.write("\t.noise_mode=0,\n") # noise_mode
-        outfile.write("\t.panning=0xff,\n") # panning
+    # when there's multiple channel init calls a function will be created
+    # if there's only one we just point to that
+    writelabel("channel_init")
+    if len(channel_init_calls) > 1:
+        outfile.write(".dw " + song_prefix + "_channel_init_call" + "\n")
+    else:
+        outfile.write(".dw " + channel_init_calls[0] + "\n")    
+        
+    # when there's multiple channel update calls a function will be created
+    # if there's only one we just point to that
+    writelabel("channel_update")
+    if len(channel_update_calls) > 1:
+        outfile.write(".dw " + song_prefix + "_channel_update_call\n")
+    else:
+        outfile.write(".dw " + channel_update_calls[0] + "\n")    
 
-        outfile.write("\t.channel_types={{ {:s} }}\n".format(", ".join(map(str, channel_types))))
-        outfile.write("};\n\n")
+    # array of calls to the mute function for each channel
+    writelabel("channel_mute")
+    outfile.write(".dw " + song_prefix + "_channel_mute_calls_data\n")
 
-        # volume macros
-        for i in range (0, len(volume_macros)):
+    # when there's multiple song mute calls a function will be created
+    # if there's only one we just point to that
+    writelabel("song_mute")
+    if len(song_mute_calls) > 1:
+        outfile.write(".dw " + song_prefix + "_song_mute_call\n")
+    else:
+        outfile.write(".dw " + song_mute_calls[0] + "\n")    
 
-            outfile.write("static const unsigned char {:s}_volume_macro_{:d}[] = {{ {:s} }};\n".format(song_prefix, i, ", ".join(map(str, volume_macros[i]))))
+    writelabel("song_stop")
+    outfile.write(".dw " + ("_" if options.sdas else "") + ("banjo_sfx_stop" if sfx else "banjo_song_stop") + "\n")
+    outfile.write("\n" + "\n")
+
+    # channel init calls
+    if len(channel_init_calls) > 1:
+        writelabel("channel_init_call")
+        for call in channel_init_calls:
+            outfile.write("\tcall " + call + "\n")
+        outfile.write("\tret\n")
+        outfile.write("\n")
+
+    # channel update calls
+    if len(channel_update_calls) > 1:
+        writelabel("channel_update_call")
+        for call in channel_update_calls:
+            outfile.write("\tcall " + call + "\n")
+        outfile.write("\tret\n")
+        outfile.write("\n")
+
+    # channel mute calls
+    writelabel("channel_mute_calls_data")
+    outfile.write("\t.dw " + ", ".join(channel_mute_calls) + "\n")
+    outfile.write("\n")
+
+    # song mute calls
+    if len(song_mute_calls) > 1:
+        writelabel("song_mute_call")
+        for call in song_mute_calls:
+            outfile.write("\tcall " + call + "\n")
+        outfile.write("\tret\n")
+        outfile.write("\n")
+
+    # macros
+    writelabel("macros")
+
+    for key in macros:
+
+        writelabel(key)
+        outfile.write(".db " + ", ".join(map(str, macros[key])) + "\n")
+
+    outfile.write("\n" + "\n")
+
+    # fm patches
+    writelabel("fm_patches")
+
+    print(fm_patches)
+
+    for key in fm_patches:
+
+        writelabel(key)
+        outfile.write(".db " + ", ".join(map(str, fm_patches[key])) + "\n")
+
+    outfile.write("\n" + "\n")
+
+    # instruments
+    writelabel("instrument_pointers")
+
+    for i in range (0, len(instruments)):
+
+        outfile.write(".dw " + song_prefix + "_instrument_" + str(i) + "\n")
+
+    outfile.write("\n" + "\n")
+
+    # instruments
+    writelabel("instrument_data")
+
+    for i in range (0, len(instruments)):
+
+        instrument = instruments[i]
+
+        writelabel("instrument_" + str(i))
+        outfile.write("\t.db " + str(instrument["volume_macro_len"]) + " ; len\n")
+        outfile.write("\t.db " + str(instrument["volume_macro_loop"]) + " ; loop\n")
+
+        if (instrument["volume_macro_ptr"] == 0xffff):
+            outfile.write("\t.dw 0xffff ;ptr\n")
+        else:
+            outfile.write("\t.dw " + song_prefix + "_" + str(instrument["volume_macro_ptr"]) + " ; ptr\n")
+
+        # ex macro
+        outfile.write("\t.db " + str(instrument["ex_macro_type"]) + " ; type\n")
+        outfile.write("\t.db " + str(instrument["ex_macro_len"]) + " ; len \n")
+        outfile.write("\t.db " + str(instrument["ex_macro_loop"]) + " ; loop\n")
+
+        if (instrument["ex_macro_ptr"] == 0xffff):
+            outfile.write("\t.dw 0xffff ;ptr\n")
+        else:
+            outfile.write("\t.dw " + song_prefix + "_" + str(instrument["ex_macro_ptr"]) + " ; ptr\n")
+
+        # fm preset
+        outfile.write("\t.db " + str(instrument["fm_patch"]) + "\n")
+
+        # fm patch
+        if (instrument["fm_patch_ptr"] == 0xffff):
+            outfile.write("\t.dw 0xffff ;ptr\n")
+        else:
+            outfile.write("\t.dw " + song_prefix + "_" + str(instrument["fm_patch_ptr"]) + " ; ptr\n")
+
+
+
+    outfile.write("\n" + "\n")
+
+
+    # order pointers
+    writelabel("order_pointers")
+
+    for i in range (0, song['channel_count']):
+
+        # in sfx mode, only process sfx channel
+        if (sfx and i != sfx_channel):
+
+            continue
+
+
+        outfile.write("\t.dw " + song_prefix + "_orders_channel_" + str(i) + "\n")
+
+
+    # orders
+    writelabel("orders")
+
+    for i in range (0, song['channel_count']):
+
+        # in sfx mode, only process sfx channel
+        if (sfx and i != sfx_channel):
+
+            continue
+
+
+        writelabel("orders_channel_" + str(i))
+
+        for j in range (0, len(song['orders'][i])):
+
+            if (j % 4 == 0):
+
+                outfile.write("\n\t.dw ")
+
+
+            outfile.write(song_prefix + "_patterns_" + str(i) + "_" + str(song['orders'][i][j]))
+
+            if ((j % 4 != 3) and (j != len(song['orders'][i]) - 1)):
+
+                outfile.write(", ")
+
 
         outfile.write("\n")
 
 
-        if len (instruments) > 0:
+    outfile.write("\n" + "\n")
 
-            # instrument pointers
-            outfile.write("static const instrument_t * const {:s}_instrument_pointers[] = {{\n".format(song_prefix))
+    # patterns
+    writelabel("patterns")
 
-            for i in range (0, len(instruments)):
+    for i in range (0, song['channel_count']):
 
-                outfile.write("\t&{:s}_instrument_{:d},\n".format(song_prefix, i))
+        # in sfx mode, only process sfx channelfs.
+        if (sfx and i != sfx_channel):
 
-            outfile.write("};\n\n")
+            continue
 
+        for j in range (0, len(song["patterns"][i])):
 
-        # instruments
-        for i in range (0, len(instruments)):
+            pattern_index = song["patterns"][i][j]["index"]
 
-            instrument = instruments[i]
+            writelabel("patterns_" + str(i) + "_" + str(pattern_index))
+            outfile.write(".db " + ", ".join(map(str, patterns[i][pattern_index])) + "\n")
 
-            outfile.write("static const instrument_t {:s}_instrument_{:d} = {{\n".format(song_prefix, i))
-            outfile.write("\t.volume_macro_len={:d}, .volume_macro_loop={:d},\n".format(instrument[0], instrument[1]))
-
-            # volume macro pointer
-            if (instrument[2] != 0xffff):
-
-                outfile.write("\t.volume_macro_ptr={:s}_volume_macro_{:d},\n".format(song_prefix, instrument[2]))
-
-            else:
-
-                outfile.write("\t.volume_macro_ptr=0xffff,\n")
-
-
-            # fm preset
-            outfile.write("\t.fm_preset={:d},\n".format(instrument[3]))
-
-            # fm patch
-            outfile.write("\t.fm_patch={{ {:s} }}\n".format(", ".join(map(str, instrument[4:12]))))
-
-            outfile.write("};\n\n")
-
-
-        # order pointers
-        outfile.write("static const unsigned char * const * const {:s}_order_pointers[] = {{\n".format(song_prefix))
-
-        order_pointer_list = []
-
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channel
-            if (sfx and i != sfx_channel):
-
-                continue
-
-            outfile.write("\t{:s}_orders_channel_{:d},\n".format(song_prefix, i))
-
-        outfile.write("};\n\n")
-
-
-        # orders
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channel
-            if (sfx and i != sfx_channel):
-
-                continue
-
-            outfile.write("static const unsigned char * const {:s}_orders_channel_{:d}[] = {{\n".format(song_prefix, i))
-
-            for j in range (0, len(song['orders'][i])):
-
-                outfile.write("\t{:s}_patterns_{:d}_{:d},\n".format(song_prefix, i, song['orders'][i][j]))
-
-            outfile.write("};\n")
-
-        outfile.write("\n\n")
-
-
-        # patterns
-        for i in range (0, song['channel_count']):
-
-            # in sfx mode, only process sfx channelfs.
-            if (sfx and i != sfx_channel):
-
-                continue
-
-            for j in range (0, len(song["patterns"][i])):
-
-                pattern_index = song["patterns"][i][j]["index"]
-
-                outfile.write("static const unsigned char {:s}_patterns_{:d}_{:d}[] = {{\n\t{:s}\n}};\n".format(song_prefix, i, pattern_index, ", ".join(map(str, patterns[i][pattern_index]))))
-
-        outfile.write("\n\n")
+    #outfile.write("\n\n.rept 10000\n.db 0xba\n.endm\n")
 
     # close file
     outfile.close()

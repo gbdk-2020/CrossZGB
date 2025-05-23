@@ -99,8 +99,9 @@ def main(argv=None):
         pixels = font.load()
         
         palette = list(chunks(font.getpalette(), 3))
-        num_palettes = len(palette) // colors_per_palette
+        num_palettes = max(1, len(palette) // colors_per_palette)
         palette = palette[0 : num_palettes * colors_per_palette]
+        palette.extend([[0, 0, 0]] * ((num_palettes * colors_per_palette) - len(palette)))
         
         indexes, widths, faces = [0] * 256, [], []
         
@@ -141,12 +142,12 @@ def main(argv=None):
             outf.write(bytes("const font_desc_t {0:s}_font = {{\n"
                              "    .attr         = {1:s}{2:s}0,\n"
                              "    .recode_table = {0:s}_table,\n"
-                             "{2:s}"
+                             "{3:s}"
                              "    .faces        = {0:s}_tiles\n"
                              "}};\n\n".format(identifier, 
                                               "RECODE_7BIT | " if is7BIT else "", 
                                               "FONT_VWF | " if options.vwf else "",
-                                              ".widths       = {0:s}_widths,\n" if options.vwf else "",
+                                              "    .widths       = {0:s}_widths,\n".format(identifier) if options.vwf else "",
                                               ),
                              "ascii"))
 

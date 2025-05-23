@@ -3,10 +3,9 @@
 #include <stdlib.h>
 
 #include "SpriteManager.h"
+#include "Coroutines.h"
 #include "Keys.h"
 #include "ZGBMain.h"
-
-#include "coroutines_runner.h"
 
 // player sprite pointer declaration, initialized in the SpritePlayer.c
 extern Sprite * PLAYER;
@@ -17,14 +16,6 @@ extern Sprite * PLAYER;
 // aim to the center of the player sprite
 #define TARGET_X_COORD (PLAYER->x + (PLAYER_WIDTH / 2))
 #define TARGET_Y_COORD (PLAYER->y + (PLAYER_HEIGHT / 2))
-
-// define the CUSTOM_DATA struct which holds the pointer to the allocated coroutine context
-typedef struct {
-	void * ctx;
-} CUSTOM_DATA;
-CHECK_CUSTOM_DATA_SIZE(CUSTOM_DATA);
-// define helper macro for the easy access to the allocated coroutine context pointer
-#define THIS_CTX (((CUSTOM_DATA*)THIS->custom_data)->ctx)
 
 // bullet sprite logic coroutine
 // since we are calling the sprite coroutine from within the UPDATE handler only, THIS and THIS_IDX are valid
@@ -42,21 +33,21 @@ void SpriteBulletLogic(void * custom_data) BANKED {
 		if (e2 > dy) { err += dy; THIS->x += sx; }
 		if (e2 < dx) { err += dx; THIS->y += sy; }
 		// yield coroutine execution
-		coro_yield();
+		YIELD;
 	}
 }
 
 void START(void) {
-	// allocate coroutine context, set coroutine function and pass THIS as data, remove sprite if failed
-	if (!(THIS_CTX = coro_runner_alloc(SpriteBulletLogic, BANK(SpriteBullet), NULL))) SpriteManagerRemoveSprite(THIS);
+	// allocate coroutine context
+	INIT_CORO(BANK(SpriteBullet), SpriteBulletLogic);
 }
 
 void UPDATE(void) {
-	// iterate coroutine, if it finishes normally - remove sprite
-	if (!coro_runner_process(THIS_CTX)) SpriteManagerRemoveSprite(THIS);
+	// iterate coroutine
+	ITER_CORO;
 }
 
 void DESTROY(void) {
 	// deallocate coroutine context
-	coro_runner_free(THIS_CTX);
+	FREE_CORO;
 }

@@ -1,0 +1,10 @@
+PNG2METATILES = python ../tools/png2metatiles/png2metatiles.py
+
+METATILES = $(foreach dir,../res/metatiles/$(EXT),$(notdir $(wildcard $(dir)/*.png)))
+
+OBJS := $(METATILES:%.png=$(OBJDIR_RES)/%.o) $(OBJS)
+SEC_TARGETS := $(METATILES:%.png=$(OBJDIR_RES)/%.c) $(SEC_TARGETS)
+
+.SECONDEXPANSION:
+$(OBJDIR_RES)/%.c: ../res/metatiles/$(EXT)/%.png $$(wildcard ../res/metatiles/$(EXT)/%.png.meta)
+	@$(PNG2METATILES) -o $@ $(if $(wildcard $<.meta),`cat <$<.meta`) $<

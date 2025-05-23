@@ -27,6 +27,7 @@ UINT8 _is_SGB = 0;
 UINT8 delta_time;
 UINT8 current_state;
 UINT8 state_running = 0;
+UINT8 fade_enabled = TRUE;
 
 void SetState(UINT8 state) {
 	state_running = 0;
@@ -81,7 +82,7 @@ void SetWindowPos(UINT8 x, UINT8 y, UINT8 h) {
 void main(void) {
 #if defined(NINTENDO)
 	// this delay is required for PAL SNES SGB border commands to work
-	for (UINT8 i = 4; i != 0; i--) wait_vbl_done();
+	for (UINT8 i = 4; i != 0; i--) vsync();
 	// set global SGB detection variable
 	_is_SGB = sgb_check();
 	#ifdef CGB
@@ -171,13 +172,13 @@ void main(void) {
 		scroll_x_vblank = scroll_x, scroll_y_vblank = scroll_y;
 
 		if (state_running) {				// initialization function may change state immediately
-			FadeOut();
+			if (fade_enabled) FadeOut(); else DISPLAY_ON;
 
 			Void_Func_Void current_update = updateFuncs[current_state];
 
 			while (state_running) {
 				if (!vbl_count)
-					wait_vbl_done();
+					vsync();
 
 				delta_time = (vbl_count < 2u) ? 0u : 1u;
 				vbl_count = 0;
@@ -189,7 +190,7 @@ void main(void) {
 				current_update();		// update current state
 			}
 
-			FadeIn();
+			if (fade_enabled) FadeIn(); else DISPLAY_OFF;
 		}
 
 		destroyFuncs[current_state]();			// destroy current state

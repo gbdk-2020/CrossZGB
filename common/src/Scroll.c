@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "Vector.h"
 #include "Scroll.h"
 #include "Sprite.h"
 #include "SpriteManager.h"
@@ -55,11 +56,13 @@ UINT16 scroll_tiles_w;
 UINT16 scroll_tiles_h;
 Sprite* scroll_target = 0;
 UINT8 scroll_collisions[256];
-UINT8 scroll_collisions_down[256];
 UINT8 scroll_tile_info[256];
 UINT8 scroll_bank;
 UINT8 scroll_offset_x = 0;
 UINT8 scroll_offset_y = 0;
+
+INT8 scroll_h_border = 0;
+UINT8 clamp_enabled = 1;
 
 INT16 pending_h_x, pending_h_y;
 UINT8 pending_h_i;
@@ -94,7 +97,7 @@ void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
 			static UINT16 id;
 			static UINT8 i;
 			id = SPRITE_UNIQUE_ID(x, y);
-			for (i = sprite_manager_updatables[0]; (i != 0); i--) {
+			for (i = VECTOR_LEN(sprite_manager_updatables); (i); i--) {
 				Sprite* s = sprite_manager_sprites[sprite_manager_updatables[i]];
 				if ((s->type == type) && (s->unique_id == id)) {
 					break;
@@ -131,8 +134,7 @@ UINT16 ScrollSetTiles(UINT8 first_tile, UINT8 tiles_bank, const struct TilesInfo
 
 	UINT16 offset = first_tile;
 
-	if(first_tile == 0)
-	{
+	if(first_tile == 0) {
 		tiles_bank_0 = tiles_bank;
 		tiles_0 = tiles;
 	}
@@ -236,16 +238,7 @@ UINT16 LoadMap(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT8 map_bank, struct MapInfo
 	return map_offset;
 }
 
-INT8 scroll_h_border = 0;
-UINT8 clamp_enabled = 1;
-void ClampScrollLimits(void) {
-	if(clamp_enabled) {
-		if(scroll_x < 0) scroll_x = 0u;
-		if(scroll_x > (scroll_w - SCREEN_WIDTH)) scroll_x = (scroll_w - SCREEN_WIDTH);
-		if(scroll_y < 0) scroll_y = 0u;
-		if(scroll_y > (scroll_h - SCREEN_HEIGHT + scroll_h_border)) scroll_y = (scroll_h - SCREEN_HEIGHT + scroll_h_border);
-	}
-}
+void ClampScrollLimits(void);
 
 void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map) {
 	UINT8 __save = CURRENT_BANK;
@@ -259,7 +252,7 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map) {
 	scroll_w = scroll_tiles_w << 3;
 	scroll_h = scroll_tiles_h << 3;
 	scroll_bank = map_bank;
-	if(scroll_target) {
+	if (scroll_target) {
 		scroll_x = scroll_target->x - (SCREEN_WIDTH >> 1);
 		scroll_y = scroll_target->y - scroll_bottom_movement_limit; //Move the camera to its bottom limit
 		ClampScrollLimits();
@@ -278,20 +271,24 @@ void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapIn
 	SWITCH_ROM(__save);
 }
 
-void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
-	memset(scroll_collisions, 0, sizeof(scroll_collisions));
-	memset(scroll_collisions_down, 0, sizeof(scroll_collisions_down));
 
-	if(coll_list) {
-		for(UINT8 i = 0u; coll_list[i] != 0u; ++i) {
-			scroll_collisions[coll_list[i]] = 1u;
-			scroll_collisions_down[coll_list[i]] = 1u;
-		}
+void ScrollCollisionsReset(void) {
+	memset(scroll_collisions, 0, sizeof(scroll_collisions));
+}
+
+void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list) {
+	for(const UINT8 * ptr = coll_list; (*ptr); ptr++) 
+		scroll_collisions[*ptr] |= group;
+}
+
+
+void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
+	ScrollCollisionsReset();
+	if (coll_list) {
+		ScrollInitCollisionGroup((COLL_GROUP_DEFAULT | COLL_GROUP_DOWN), coll_list);
 	}
-	if(coll_list_down) {
-		for(UINT8 i = 0u; coll_list_down[i] != 0u; ++i) {
-			scroll_collisions_down[coll_list_down[i]] = 1u;
-		}
+	if (coll_list_down) {
+		ScrollInitCollisionGroup(COLL_GROUP_DOWN, coll_list_down);
 	}
 }
 
@@ -299,7 +296,7 @@ void ScrollScreenRedraw(void) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
 		INT16 y = scroll_y >> 3;
-		for(UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
+		for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
 			ScrollUpdateRow((scroll_x >> 3) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
 		}
 	SWITCH_ROM(__save);
@@ -320,7 +317,7 @@ void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_lis
 }
 
 void ScrollUpdateRowR(void) {
-	for(UINT8 i = 0u; i != SCREEN_RESTORE_W && pending_w_i != 0; ++i, --pending_w_i)  {
+	for (UINT8 i = 0u; i != SCREEN_RESTORE_W && pending_w_i != 0; ++i, --pending_w_i)  {
 		#ifdef CGB
 		UPDATE_TILE(pending_w_x++, pending_w_y, pending_w_map++, pending_w_cmap++);
 		#else
@@ -330,7 +327,7 @@ void ScrollUpdateRowR(void) {
 }
 
 void ScrollUpdateRowWithDelay(INT16 x, INT16 y) {
-	while(pending_w_i) {
+	while (pending_w_i) {
 		ScrollUpdateRowR();
 	}
 
@@ -352,7 +349,7 @@ void ScrollUpdateRow(INT16 x, INT16 y) {
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-	for(UINT8 i = 0u; i != (SCREEN_TILE_REFRES_W); ++i) {
+	for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_W); ++i) {
 		#ifdef CGB
 		UPDATE_TILE(x + i, y, map ++, cmap ++);
 		#else
@@ -363,7 +360,7 @@ void ScrollUpdateRow(INT16 x, INT16 y) {
 }
 
 void ScrollUpdateColumnR(void) {
-	for(UINT8 i = 0u; i != SCREEN_RESTORE_H && pending_h_i != 0; ++i, pending_h_i --) {
+	for (UINT8 i = 0u; i != SCREEN_RESTORE_H && pending_h_i != 0; ++i, pending_h_i --) {
 		#ifdef CGB
 		UPDATE_TILE(pending_h_x, pending_h_y ++, pending_h_map, pending_h_cmap);
 		pending_h_map += scroll_tiles_w;
@@ -376,7 +373,7 @@ void ScrollUpdateColumnR(void) {
 }
 
 void ScrollUpdateColumnWithDelay(INT16 x, INT16 y) {
-	while(pending_h_i) {
+	while (pending_h_i) {
 		ScrollUpdateColumnR();
 	}
 
@@ -398,7 +395,7 @@ void ScrollUpdateColumn(INT16 x, INT16 y) {
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-	for(UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H); ++i) {
+	for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H); ++i) {
 		#ifdef CGB
 		UPDATE_TILE(x, y + i, map, cmap);
 		map += scroll_tiles_w;
@@ -412,11 +409,11 @@ void ScrollUpdateColumn(INT16 x, INT16 y) {
 }
 
 void RefreshScroll(void) {
-	UINT16 ny = scroll_y;
+	if (scroll_target) {
+		UINT16 ny = scroll_y;
 
-	if(scroll_target) {
-		if(scroll_bottom_movement_limit < scroll_target->y - scroll_y) ny = scroll_target->y - scroll_bottom_movement_limit;
-		else if(scroll_target->y - scroll_y < scroll_top_movement_limit) ny = scroll_target->y - scroll_top_movement_limit;
+		if (scroll_bottom_movement_limit < (scroll_target->y - scroll_y)) ny = scroll_target->y - scroll_bottom_movement_limit;
+		else if (scroll_top_movement_limit > (scroll_target->y - scroll_y)) ny = scroll_target->y - scroll_top_movement_limit;
 
 		MoveScroll(scroll_target->x - (SCREEN_WIDTH >> 1), ny);
 	}
@@ -438,26 +435,26 @@ void MoveScroll(INT16 x, INT16 y) {
 	new_column     = scroll_x >> 3;
 	new_row        = scroll_y >> 3;
 
-	if(current_column != new_column) {
-		if(new_column > current_column) {
+	if (current_column != new_column) {
+		if (new_column > current_column) {
 			ScrollUpdateColumnWithDelay(new_column - SCREEN_PAD_LEFT + SCREEN_TILE_REFRES_W - 1, new_row - SCREEN_PAD_TOP);
 		} else {
 			ScrollUpdateColumnWithDelay(new_column - SCREEN_PAD_LEFT,                            new_row - SCREEN_PAD_TOP);
 		}
 	}
 
-	if(current_row != new_row) {
-		if(new_row > current_row) {
+	if (current_row != new_row) {
+		if (new_row > current_row) {
 			ScrollUpdateRowWithDelay(new_column - SCREEN_PAD_LEFT, new_row - SCREEN_PAD_TOP + SCREEN_TILE_REFRES_H - 1);
 		} else if (new_row >= SCREEN_PAD_TOP) {
 			ScrollUpdateRowWithDelay(new_column - SCREEN_PAD_LEFT, new_row - SCREEN_PAD_TOP);
 		}
 	}
 
-	if(pending_w_i) {
+	if (pending_w_i) {
 		ScrollUpdateRowR();
 	}
-	if(pending_h_i) {
+	if (pending_h_i) {
 		ScrollUpdateColumnR();
 	}
 	SWITCH_ROM(__save);
@@ -475,27 +472,8 @@ UINT8 GetScrollTile(UINT16 x, UINT16 y) {
 void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT8* tiles_w, UINT8* tiles_h) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(map_bank);
-	if(tiles_w) *tiles_w = map->width;
-	if(tiles_h) *tiles_h = map->height;
+	if (tiles_w) *tiles_w = map->width;
+	if (tiles_h) *tiles_h = map->height;
 	SWITCH_ROM(__save);
-}
-
-UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile, UINT8 start_x, UINT8 start_y, UINT8 w, UINT8 h, UINT16* x, UINT16* y) {
-	UINT8 __save = CURRENT_BANK;
-	SWITCH_ROM(map_bank);
-	for(UINT16 xt = start_x; xt != start_x + w; ++ xt) {
-		for(UINT16 yt = start_y; yt != start_y + h; ++ yt) {
-			if(map->data[map->width * yt + xt] == tile) {
-				*x = xt;
-				*y = yt;
-				SWITCH_ROM(__save);
-				return 1;
-			}
-		}
-	}
-	SWITCH_ROM(__save);
-
-	*x = *y = 0;
-	return 0;
 }
 

@@ -67,7 +67,7 @@ void set_sgb_border(unsigned char * tiledata, size_t tiledata_size,
 
 		BGP_REG = __save_BGP;
 
-		wait_vbl_done();
+		vsync();
 
 		SGB_TRANSFER(SGB_MASK_EN, SGB_SCR_UNFREEZE); 
 

@@ -9,6 +9,7 @@
 
 void CheckSRAMIntegrity(UINT8* ptr, UINT16 size) BANKED {
 	ENABLE_RAM;
+	SWITCH_RAM(0);
 	UINT16 bytes_to_clear = 0;
 	UINT16* bytes_stored = (UINT16*)(ptr + MAGIC_LENGTH);
 	if(strcmp((char*)ptr, MAGIC) != 0) {

@@ -11,7 +11,7 @@ inline UINT8 FadeInOp(UINT8 c, UINT8 i) {
 static UINT8* const pals[] = {&BGP_REG, &OBP0_REG, &OBP1_REG};
 
 void FadeDMG(UINT8 fadeout) {
-	UINT8 colors[12];
+	static UINT8 colors[12];
 	UINT8 i, j; 
 	UINT8* c = colors;
 	UINT8 p;
@@ -30,9 +30,9 @@ void FadeDMG(UINT8 fadeout) {
 			c = &colors[j << 2];
 			*pals[j] = DMG_PALETTE(FadeInOp(c[0], p), FadeInOp(c[1], p), FadeInOp(c[2], p), FadeInOp(c[3], p));
 		}
-		wait_vbl_done();
-		wait_vbl_done();
-		wait_vbl_done();
+		vsync();
+		vsync();
+		vsync();
 	}
 }
 

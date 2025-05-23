@@ -252,7 +252,7 @@ paket-files/
 *.sln.iml
 
 #VS.Code
-.vscode
+common/.vscode
 
 tools/gbm2c/gbm2c.exe
 tools/gbm2c/gbm2c

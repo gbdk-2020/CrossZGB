@@ -27,7 +27,7 @@ typedef enum {
 void SetWindowPos(UINT8 x, UINT8 y, UINT8 h);
 #define INIT_HUD_EX(MAP, Y, H)\
 	hud_map_offset = LoadMap(TARGET_WIN, 0, 0, BANK(MAP), &MAP); \
-	SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (Y), (H))
+	SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (UINT8)(Y), (H))
 #define INIT_HUD(MAP)\
 	GetMapSize(BANK(MAP), &MAP, 0, &scroll_h_border); \
 	scroll_h_border = scroll_h_border << 3; \
@@ -55,10 +55,9 @@ extern UINT16 scroll_w;
 extern UINT16 scroll_h;
 extern UINT16 scroll_tiles_w;
 extern UINT16 scroll_tiles_h;
-extern UINT8  scroll_collisions[256];
-extern UINT8  scroll_collisions_down[256];
+extern UINT8 scroll_collisions[256];
 extern UINT8 scroll_tile_info[256];
-extern UINT8  scroll_bank;
+extern UINT8 scroll_bank;
 extern UINT8 scroll_offset_x;
 extern UINT8 scroll_offset_y;
 
@@ -81,7 +80,22 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map);
 void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapInfo* map);
 #define InitScrollTiles(FIRST_TILE, TILE_MAP) ScrollInitTilesFromMap((FIRST_TILE), BANK((TILE_MAP)), &(TILE_MAP))
 
+typedef enum {
+	COLL_GROUP_0 = 0x01,
+	COLL_GROUP_DEFAULT = 0x01,
+	COLL_GROUP_1 = 0x02,
+	COLL_GROUP_2 = 0x04,
+	COLL_GROUP_3 = 0x08,
+	COLL_GROUP_4 = 0x10,
+	COLL_GROUP_5 = 0x20,
+	COLL_GROUP_6 = 0x40,
+	COLL_GROUP_7 = 0x80,
+	COLL_GROUP_DOWN = 0x80 
+} CollisionGroup;
+
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down);
+void ScrollCollisionsReset(void);
+void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list);
 void ScrollScreenRedraw(void);
 
 void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_list, const UINT8* coll_list_down);

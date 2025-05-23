@@ -22,8 +22,8 @@ palette_color_t UpdateColor(UINT8 i, palette_color_t col) {
 }
 
 void FadeStepColor(UINT8 i) {
-	palette_color_t palette[16];
-	palette_color_t palette_s[16];
+	static palette_color_t palette[16];
+	static palette_color_t palette_s[16];
 	palette_color_t* col = ZGB_Fading_BPal;
 	palette_color_t* col_s = ZGB_Fading_SPal;
 
@@ -38,8 +38,8 @@ void FadeStepColor(UINT8 i) {
 	set_sprite_palette(0, 1, palette_s);
 
 	DISPLAY_ON;
-	wait_vbl_done();
-	wait_vbl_done();
+	vsync();
+	vsync();
 }
 
 void FadeIn(void) BANKED {

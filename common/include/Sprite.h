@@ -38,6 +38,9 @@ typedef struct {
 	// Flags, currently used for mirroring
 	MirroMode mirror;
 
+	// For the coroutine runner
+	void * ctx;			// pointer to the coroutine context if coroutines are used
+
 	// For the sprite manager
 	INT16 lim_x, lim_y;             // limits offscren where the sprite will be deleted (0 means immediatelly)
 	UINT8 type;                     // sprite type (enemy, bullet, etc.)
@@ -45,6 +48,8 @@ typedef struct {
 	UINT16 unique_id;               // unique ID, based on the tile, sprite spawned at
 
 	UINT8 visible;                  // visibility (sprite is not rendered if zero)
+	UINT8 coll_group;               // collision group
+	UINT8 coll_group_down;          // collision group when moving down
 
 	UINT8 custom_data[CUSTOM_DATA_SIZE];
 } Sprite;
@@ -67,6 +72,10 @@ typedef struct {
 void SetFrame(Sprite* sprite, UINT8 frame);
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
+
+inline void SetSpriteCollisionGroup(Sprite* sprite, UINT8 group, UINT8 group_down) {
+	sprite->coll_group = group, sprite->coll_group_down = group_down;
+}
 
 inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
 	if (sprite->anim_data) {

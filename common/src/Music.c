@@ -32,11 +32,14 @@ inline void __SetMusicMuteMask(UINT8 mask) {
 	PSGMuteMask = mask;
 }
 #elif defined(MUSIC_DRIVER_BANJO)
+
+BANJO_SONG_CHANNELS(CHAN_COUNT_SN)
+
 void __InitMusicDriver(void) NONBANKED {
 	UBYTE __save = CURRENT_BANK;
 	SWITCH_ROM(1);
 	banjo_check_hardware();
-	banjo_init(MODE_SN);
+	banjo_init(CHAN_COUNT_SN, BANJO_HAS_SN);
 	SWITCH_ROM(__save);
 }
 void __StopMusic(void) NONBANKED {
@@ -140,7 +143,8 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 		UBYTE __save2 = MAP_FRAME2;
 		SWITCH_ROM(1);
 		SWITCH_ROM2(bank);
-		banjo_play_song(music, loop);
+		banjo_play_song(music);
+		banjo_set_song_loop_mode(loop);
 		SWITCH_ROM2(__save2);
 #endif
 		SWITCH_ROM(__save);
