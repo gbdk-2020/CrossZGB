@@ -60,7 +60,7 @@ jobs:
         run: |
           cd CrossZGB
           # GBDK
-          curl -Lo gbdk.tar.gz https://github.com/gbdk-2020/gbdk-2020/releases/download/4.4.0/gbdk-linux64.tar.gz
+          curl -Lo gbdk.tar.gz https://github.com/gbdk-2020/gbdk-2020/releases/download/4.4.0/gbdk-macos.tar.gz
           tar xvfz gbdk.tar.gz
           rm -f gbdk.tar.gz
           # ZGB env package 
