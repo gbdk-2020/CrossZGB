@@ -385,23 +385,25 @@ $(OBJDIR_ZGB)/%.o: $(ZGB_PATH_UNIX)/src/$(PLAT)/%.c
 	@echo compiling $<
 	@$(LCC) $(CFLAGS) -c -o $@ $<
 
+$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB)
 ifneq ($(OS),Windows_NT)
 # SDAR utility has problems with the windows version
-$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB) 
 	@echo creating zgb.lib    
-	@rm -f $(OBJDIR_ZGB)/zgb.lib
+	@rm -f $@
 	@for file in $(OBJS_ZGB) ; do \
 		$(SDAR) -ru $@ $${file} ; \
 	done
 else
 # fall back to the old style library which is just the object file list
-$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB) 
 	@echo creating zgb.lib    
-	@rm -f $(OBJDIR_ZGB)/zgb.lib
+	@rm -f $@
 	@if [ -n "$(OBJECTS_ZGB)" ] ; then \
 		cp $(OBJECTS_ZGB) $(OBJDIR_ZGB)/ ; \
 	fi
-	@echo -e "$(subst $(subst ,, ),\n,$(notdir $(OBJS_ZGB)))" >> $@
+	@for file in $(notdir $(OBJS_ZGB)) ; do \
+		echo -e "$${file}" >> $@ ; \
+	done
+
 endif
 
 
