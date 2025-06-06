@@ -439,15 +439,22 @@ $(OBJDIR)/savegame.o: savegame.c
 	@echo compiling savegame on SRAM bank 0
 	@$(LCC) $(CFLAGS) -Wf-ba0 -c -o $@ $<
 
-$(BINDIR)/$(PROJECT_NAME).$(EXT): $(OBJDIR) $(OBJDIR_ZGB)/zgb.lib $(OBJDIR_RES) $(OBJDIR_RES)/sprites $(BINDIR) $(OBJS)
-	@echo Linking
-	@$(LCC) $(BINFLAGS) -Wl-k$(OBJDIR_ZGB)/ -Wl-lzgb.lib -o $(OBJDIR)/rom.$(EXT) $(OBJS)
+$(OBJDIR)/list.lk: $(OBJDIR) $(OBJS)
+	@echo creating linkfile
+	@rm -f $@
+	@for file in $(OBJS) ; do \
+		echo -e "$${file}" >> $@ ; \
+	done
+
+$(BINDIR)/$(PROJECT_NAME).$(EXT): $(OBJDIR) $(OBJDIR_ZGB)/zgb.lib $(OBJDIR_RES) $(OBJDIR_RES)/sprites $(BINDIR) $(OBJDIR)/list.lk
+	@echo linking
+	@$(LCC) $(BINFLAGS) -Wl-k$(OBJDIR_ZGB)/ -Wl-lzgb.lib -Wl-f$(OBJDIR)/list.lk -o $(OBJDIR)/rom.$(EXT)
 	@cp $(OBJDIR)/rom.$(EXT) $(BINDIR)/$(PROJECT_NAME).$(EXT)
 	@cp $(OBJDIR)/rom.sym $(BINDIR)/$(PROJECT_NAME).sym
 	@if test -f "$(OBJDIR)/rom.cdb" ; then \
 		cp $(OBJDIR)/rom.cdb $(BINDIR)/$(PROJECT_NAME).cdb ; \
 	fi
-	@echo Done!
+	@echo done!
 
 build_lib: $(OBJDIR) $(OBJS)
 
@@ -460,14 +467,14 @@ build_lib: $(OBJDIR) $(OBJS)
 # 	@touch $@
 
 clean:
-	@echo Cleaning $(PROJECT_NAME)
+	@echo cleaning $(PROJECT_NAME)
 	@for target in $(TARGETS); do \
 		$(MAKE) $$target-clean; \
 	done
 
 run: all
 	@if test -f $(BINDIR)/$(PROJECT_NAME).$(EXT); then \
-		echo Running $(BINDIR)/$(PROJECT_NAME).$(EXT); \
+		echo running $(BINDIR)/$(PROJECT_NAME).$(EXT); \
 		$(EMULATOR) $(BINDIR)/$(PROJECT_NAME).$(EXT); \
 	fi
 
