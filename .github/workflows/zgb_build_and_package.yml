@@ -21,7 +21,7 @@ jobs:
             name: ZGB-MacOS-x64
           - os: macos-14
             name: ZGB-MacOS-arm64
-          - os: windows-2019
+          - os: windows-2025
             name: ZGB-Windows-x64
 #          - os: windows-2019
 #            name: ZGB-Windows-x32
