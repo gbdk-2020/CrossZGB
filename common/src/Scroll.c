@@ -44,8 +44,8 @@ UINT8 scroll_bottom_movement_limit = BOTTOM_MOVEMENT_LIMIT;
 // To be defined on the main app
 UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile);
 
-unsigned char* scroll_map = 0;
-unsigned char* scroll_cmap = 0;
+unsigned char* scroll_map = NULL;
+unsigned char* scroll_cmap = NULL;
 INT16 scroll_x = 0;
 INT16 scroll_y = 0;
 INT16 scroll_x_vblank = 0;
@@ -54,7 +54,7 @@ UINT16 scroll_w;
 UINT16 scroll_h;
 UINT16 scroll_tiles_w;
 UINT16 scroll_tiles_h;
-Sprite* scroll_target = 0;
+Sprite* scroll_target = NULL;
 UINT8 scroll_collisions[256];
 UINT8 scroll_tile_info[256];
 UINT8 scroll_bank;
@@ -66,11 +66,11 @@ UINT8 clamp_enabled = 1;
 
 INT16 pending_h_x, pending_h_y;
 UINT8 pending_h_i;
-unsigned char* pending_h_map = 0;
-unsigned char* pending_w_map = 0;
+unsigned char* pending_h_map = NULL;
+unsigned char* pending_w_map = NULL;
 #ifdef CGB
-unsigned char* pending_h_cmap = 0;
-unsigned char* pending_w_cmap = 0;
+unsigned char* pending_h_cmap = NULL;
+unsigned char* pending_w_cmap = NULL;
 #endif
 INT16 pending_w_x, pending_w_y;
 UINT8 pending_w_i;
