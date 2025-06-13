@@ -2,7 +2,7 @@
 #define ZGBMAIN_H
 
 #define STATES \
-_STATE(StateGame)\
+_STATE_EX(StateGame)\
 STATE_DEF_END
 
 #define SPRITES \
