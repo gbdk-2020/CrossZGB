@@ -400,10 +400,7 @@ else
 	@if [ -n "$(OBJECTS_ZGB)" ] ; then \
 		cp $(OBJECTS_ZGB) $(OBJDIR_ZGB)/ ; \
 	fi
-	@for file in $(notdir $(OBJS_ZGB)) ; do \
-		echo -e "$${file}" >> $@ ; \
-	done
-
+	@for o in $(notdir $(OBJS_ZGB)); do echo $$o >> $@; done
 endif
 
 
@@ -444,9 +441,7 @@ $(OBJDIR)/savegame.o: savegame.c
 $(OBJDIR)/list.lk: $(OBJDIR) $(OBJS)
 	@echo creating linkfile
 	@rm -f $@
-	@for file in $(OBJS) ; do \
-		echo -e "$${file}" >> $@ ; \
-	done
+	@for o in $(OBJS); do echo $$o >> $@; done
 
 $(BINDIR)/$(PROJECT_NAME).$(EXT): $(OBJDIR) $(OBJDIR_ZGB)/zgb.lib $(OBJDIR_RES) $(OBJDIR_RES)/sprites $(BINDIR) $(OBJDIR)/list.lk
 	@echo linking
