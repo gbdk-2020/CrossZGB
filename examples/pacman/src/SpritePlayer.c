@@ -90,7 +90,7 @@ void PlayerLogic(void * custom_data) BANKED {
 					YIELD;
 				}
 				// hide player
-				THIS->visible = FALSE;
+				SetVisible(THIS, FALSE);
 				// scroll level to initial position
 				UINT16 tmp;
 				tmp = init.x << 3;
@@ -109,7 +109,7 @@ void PlayerLogic(void * custom_data) BANKED {
 				if (BLINKY) BLINKY->x = blinky_pos.x << 3, BLINKY->y = blinky_pos.y << 3;
 				if (CLYDE)  CLYDE->x  = clyde_pos.x << 3,  CLYDE->y  = clyde_pos.y << 3;
 				// show player
-				THIS->visible = TRUE;
+				SetVisible(THIS, TRUE);
 				player_dir = player_next_dir = DIR_NONE;
 				SetSpriteAnim(THIS, anim_none, ANIMATION_SPEED);
 			}
@@ -131,19 +131,19 @@ void PlayerLogic(void * custom_data) BANKED {
 
 			// wrap player
 			if ((INT16)THIS->x <= 0) {
-				THIS->visible = player_check_collision = FALSE;
+				SetVisible(THIS, player_check_collision = FALSE);
 				for (UINT8 i = current_level_desc.width - 1; (i); i--, THIS->x += 8) {
 					YIELD;
 				}
 				THIS->x = ((current_level_desc.width - 1) << 3);
-				THIS->visible = player_check_collision = TRUE;
+				SetVisible(THIS, player_check_collision = TRUE);
 			} else if (THIS-> x >= ((current_level_desc.width - 1) << 3)) {
-				THIS->visible = player_check_collision = FALSE;
+				SetVisible(THIS, player_check_collision = FALSE);
 				for (UINT8 i = current_level_desc.width - 1; (i); i--, THIS->x -= 8) {
 					YIELD;
 				}
 				THIS->x = 0;
-				THIS->visible = player_check_collision = TRUE;
+				SetVisible(THIS, player_check_collision = TRUE);
 			}
 
 			// dot eating logic

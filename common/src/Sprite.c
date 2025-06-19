@@ -51,7 +51,8 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 	sprite->coll_group = COLL_GROUP_DEFAULT;
 	sprite->coll_group_down = COLL_GROUP_DOWN;
 
-	sprite->visible = 1u;
+	SetVisible(sprite, TRUE);
+	SetPersistent(sprite, FALSE);
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
@@ -96,9 +97,11 @@ void DrawSprite(void) {
 	}
 
 	if (
-		((UINT16)(screen_x + 32u) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + 32u)) &&
-		((UINT16)(screen_y + 32u) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + 32u)) &&
-		(THIS->visible)
+		(THIS->visible) &&
+		(
+			((UINT16)(screen_x + 32u) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + 32u)) &&
+			((UINT16)(screen_y + 32u) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + 32u))
+		)
 	) {
 		// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
 		screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
@@ -118,8 +121,11 @@ void DrawSprite(void) {
 	} else {
 		// check sprite for removal 
 		if (
-			((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + 16u))) || 
-			((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + 16u)))
+			(!(THIS->persistent)) && 
+			(
+				((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + 16u))) || 
+				((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + 16u)))
+			)
 		) {
 			return SpriteManagerRemoveSprite(THIS);
 		}
@@ -127,7 +133,7 @@ void DrawSprite(void) {
 
 }
 
-unsigned char* tile_coll;
+UINT8* tile_coll;
 UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 	UINT8 ret = 0;
 	INT16 pivot_x, pivot_y;
