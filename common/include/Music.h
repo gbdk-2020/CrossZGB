@@ -13,14 +13,6 @@ extern volatile UINT8 music_paused;
 void MUSIC_isr(void) NONBANKED;
 void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 
-inline void INIT_SOUND(void) {
-#if defined(NINTENDO)
-	NR52_REG = 0x80;
-	NR51_REG = 0xFF;
-	NR50_REG = 0x77;
-#endif
-}
-
 #ifdef MUSIC_DRIVER_HUGE
 #undef MUSIC_DRIVER_GBT
 #endif
@@ -31,7 +23,7 @@ inline void INIT_SOUND(void) {
 #if defined(MUSIC_DRIVER_HUGE)
 	#include "hUGEDriver.h"
 
-	#define INIT_MUSIC
+	#define INIT_MUSIC_DRIVER()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _uge; extern const hUGESong_t SONG ## _uge
 	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _uge, (uint8_t)&__bank_ ## SONG ## _uge, 0)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
@@ -40,7 +32,7 @@ inline void INIT_SOUND(void) {
 #elif defined(MUSIC_DRIVER_GBT)
 	#include "gbt_player.h"
 
-	#define INIT_MUSIC gbt_stop()
+	#define INIT_MUSIC_DRIVER() gbt_stop()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _mod_Data; extern const unsigned char * SONG ## _mod_Data[]
 	#define PlayMusic(SONG, LOOP) __PlayMusic(SONG ## _mod_Data, (uint8_t)&__bank_ ## SONG ## _mod_Data, LOOP)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
@@ -49,7 +41,9 @@ inline void INIT_SOUND(void) {
 #elif defined(MUSIC_DRIVER_PSGLIB)
 	#include "PSGlib.h"
 
-	#define INIT_MUSIC
+	void __InitMusicDriver(void);
+	void __StopMusic(void);
+	#define INIT_MUSIC_DRIVER()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _psg; extern const void SONG ## _psg
 	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _psg, (uint8_t)&__bank_ ## SONG ## _psg, LOOP)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
@@ -58,22 +52,43 @@ inline void INIT_SOUND(void) {
 #elif defined(MUSIC_DRIVER_BANJO)
 	#include "banjo.h"
 
-	void __InitMusicDriver(void);
-	void __StopMusic(void);
-
-	#define INIT_MUSIC __InitMusicDriver()
+	#define INIT_MUSIC_DRIVER() __InitMusicDriver()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _fur; extern const song_data_t SONG ## _fur
 	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _fur, (uint8_t)&__bank_ ## SONG ## _fur, LOOP)
 	#define StopMusic __StopMusic()
 
 	#define MuteMusicChannels(CHANNELS) (music_mute_mask = (CHANNELS))
 #else
-	#define INIT_MUSIC
+	#define INIT_MUSIC_DRIVER()
 	#define DECLARE_MUSIC(SONG) extern void SONG ## _undetected
 	#define PlayMusic(SONG, LOOP)
 	#define StopMusic
 
 	#define MuteMusicChannels(CHANNELS)
 #endif
+
+inline void INIT_MUSIC(void) {
+	sfx_sound_init();
+	sfx_sound_cut();
+	CRITICAL {
+	#if defined(NINTENDO)
+		// Music is playing on timer on the Game Boy targets
+		#ifdef CGB
+			TMA_REG = (_cpu == CGB_TYPE) ? 0x78u : 0xBCu;
+		#else
+			TMA_REG = 0xBCu;
+		#endif
+		TAC_REG = 0x04u;
+		add_low_priority_TIM(MUSIC_isr);
+	#elif defined(SEGA)
+		// Music is playing on VBlank on the SMS/GG targets
+		add_VBL(MUSIC_isr);
+	#endif
+	}
+	#if defined(NINTENDO)
+	set_interrupts(IE_REG | TIM_IFLAG);
+	#endif
+	INIT_MUSIC_DRIVER();
+}
 
 #endif

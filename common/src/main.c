@@ -22,62 +22,25 @@ static void __force_use_font(void) NAKED { __asm__(".globl _font_recode_table");
 
 extern UINT8 next_state;
 
-UINT8 _is_SGB = 0;
+UINT8 _is_SGB = FALSE;
 
 UINT8 delta_time;
 UINT8 current_state;
-UINT8 state_running = 0;
+UINT8 state_running = FALSE;
 UINT8 fade_enabled = TRUE;
 
 void SetState(UINT8 state) {
-	state_running = 0;
+	state_running = FALSE;
 	next_state = state;
 }
 
-UINT8 vbl_count = 0;
-void VBL_isr(void) {
-	vbl_count ++;
-#if defined(NINTENDO)
-	move_bkg(scroll_x_vblank + (scroll_offset_x << 3), scroll_y_vblank + (scroll_offset_y << 3));
-#elif defined(SEGA)
-	if (_shadow_OAM_OFF == 0) {
-		__WRITE_VDP_REG_UNSAFE(VDP_RSCX, -(scroll_x_vblank + (scroll_offset_x << 3)));
-		__WRITE_VDP_REG_UNSAFE(VDP_RSCY, (((UINT16)(scroll_y_vblank + (scroll_offset_y << 3))) % (DEVICE_SCREEN_BUFFER_HEIGHT << 3)));
-	}
-#endif
-}
+extern UINT8 vbl_count;
+void VBL_isr(void);
+
+void InitWindow(void);
 
 void InitStates(void) BANKED;
 void InitSprites(void) BANKED;
-
-#if defined(NINTENDO)
-#define LYC_SYNC_VALUE 150u
-#define LYC_NEVER_FIRE 160u
-UINT8 win_start = DEVICE_SCREEN_PX_HEIGHT + 1u, win_stop = LYC_SYNC_VALUE, win_x = DEVICE_WINDOW_PX_OFFSET_X;
-void LCD_isr(void) NONBANKED {
-	if (LYC_REG == win_start) {
-		WX_REG = win_x;
-		SHOW_WIN; HIDE_SPRITES;
-		LYC_REG = win_stop;
-	} else {
-		WX_REG = 0;
-		HIDE_WIN; SHOW_SPRITES;
-		LYC_REG = win_start;
-	}
-}
-
-void SetWindowPos(UINT8 x, UINT8 y, UINT8 h) {
-	if ((h) && (y < DEVICE_SCREEN_PX_HEIGHT)) {
-		win_x = WX_REG = x;
-		WY_REG = y;
-		win_stop = (((UINT16)(y) + h) < LYC_SYNC_VALUE) ? (y + h) : LYC_SYNC_VALUE;
-		LYC_REG = win_start = (y) ? (y - 1u) : (LYC_SYNC_VALUE + 1u);
-	} else {
-		LYC_REG = LYC_NEVER_FIRE;
-		HIDE_WIN; SHOW_SPRITES;		
-	}
-}
-#endif
 
 void main(void) {
 #if defined(NINTENDO)
@@ -98,46 +61,27 @@ void main(void) {
 
 	InitOAMs();
 
-	INIT_MUSIC;
+	INIT_MUSIC();
 
 	InitStates();
 	InitSprites();
 
+	// Standard VBlank handler handles scroll
 	CRITICAL {
-#if defined(NINTENDO)
-	#ifdef CGB
-		TMA_REG = (_cpu == CGB_TYPE) ? 0x78u : 0xBCu;
-	#else
-		TMA_REG = 0xBCu;
-	#endif
-		TAC_REG = 0x04u;
-		//Instead of calling add_TIM add_low_priority_TIM is used because it can be interrupted. This fixes a random
-		//bug hiding sprites under the window (some frames the call is delayed and you can see sprites flickering under the window)
-		add_low_priority_TIM(MUSIC_isr);
-
 		add_VBL(VBL_isr);
-
-		STAT_REG |= STATF_LYC;
-		add_LCD(LCD_isr);
-#elif defined(SEGA)
-		add_VBL(VBL_isr);
-		add_VBL(MUSIC_isr);
-#endif
 	}
+
+	InitWindow();
 
 #if DEFAULT_SPRITES_SIZE == 8
 	SPRITES_8x8;
 #else
 	SPRITES_8x16;
 #endif
-
+	SHOW_SPRITES; SHOW_BKG;
 #if defined(NINTENDO)
-	set_interrupts(VBL_IFLAG | TIM_IFLAG | LCD_IFLAG);
-	LCDC_REG |= LCDCF_OBJON | LCDCF_BGON;
 	WY_REG = (UINT8)(DEVICE_WINDOW_PX_OFFSET_Y + DEVICE_SCREEN_PX_HEIGHT);
 #elif defined(SEGA)
-	set_interrupts(VBL_IFLAG);
-
 	HIDE_LEFT_COLUMN;
 #endif
 
@@ -146,13 +90,13 @@ void main(void) {
 #endif
 
 	DISPLAY_OFF;
-	while(1) {
+	while(TRUE) {
 		if (stop_music_on_new_state) 
 			StopMusic;
 
 		SpriteManagerReset();
 
-		state_running = 1;
+		state_running = TRUE;
 		current_state = next_state;
 		scroll_target = 0;
 		last_tile_loaded = 0;
