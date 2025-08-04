@@ -34,7 +34,7 @@ void SetState(UINT8 state) {
 	next_state = state;
 }
 
-extern UINT8 vbl_count;
+UINT8 vbl_count = 0;
 void VBL_isr(void);
 
 void InitWindow(void);

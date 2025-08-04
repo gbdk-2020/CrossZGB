@@ -2,7 +2,7 @@
 
 #include "Scroll.h"
 
-UINT8 vbl_count = 0;
+extern UINT8 vbl_count;
 void VBL_isr(void) NONBANKED {
 	vbl_count ++;
 #if defined(NINTENDO)
