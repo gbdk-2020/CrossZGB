@@ -8,6 +8,9 @@
 #include "TilesInfo.h"
 #include "gbc_hicolor.h"
 
+#define SRAM(VARNAME) ( (uint8_t) & __sram_ ## VARNAME )
+#define SRAMREF_EXTERN(VARNAME) extern const void __sram_ ## VARNAME;
+
 typedef void (*Void_Func_Void)(void);
 typedef void (*Void_Func_SpritePtr)(Sprite*);
 
