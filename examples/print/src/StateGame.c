@@ -21,3 +21,6 @@ void START(void) {
 
 void UPDATE(void) {
 }
+
+void DESTROY(void) {
+}
