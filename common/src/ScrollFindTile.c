@@ -1,6 +1,6 @@
 #include "Scroll.h"
 
-UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile, UINT8 start_x, UINT8 start_y, UINT8 w, UINT8 h, UINT16* x, UINT16* y) {
+UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile, UINT16 start_x, UINT16 start_y, UINT16 w, UINT16 h, UINT16* x, UINT16* y) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(map_bank);
 	for (UINT16 xt = start_x; xt != start_x + w; ++ xt) {

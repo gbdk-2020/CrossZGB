@@ -13,7 +13,7 @@ extern UINT8 last_tile_loaded;
 #define INIT_FONT_EX(FONT, TARGET) InitRecodeTable(FONT##_table,BANK(FONT)),print_target=(TARGET),print_render=0,font_tiledata_bank=BANK(FONT),font_tiledata=FONT##_tiles,font_current_offset=font_offset=ScrollSetTiles(last_tile_loaded, BANK(FONT), &FONT)
 
 extern UINT8 print_x, print_y, print_target, print_render;
-extern INT8 scroll_h_border;
+extern INT16 scroll_h_border;
 extern UINT16 font_offset;
 extern UINT16 font_current_offset;
 extern const UINT8 * font_tiledata;

@@ -62,7 +62,7 @@ extern UINT8 scroll_offset_x;
 extern UINT8 scroll_offset_y;
 
 extern Sprite* scroll_target;
-extern INT8 scroll_h_border;
+extern INT16 scroll_h_border;
 extern UINT8 clamp_enabled;
 
 extern UINT8 scroll_top_movement_limit;
@@ -109,7 +109,7 @@ void MoveScroll(INT16 x, INT16 y);
 void RefreshScroll(void);
 void FinishPendingScrollUpdates(void);
 
-void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT8* tiles_w, UINT8* tiles_h);
+void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT16* tiles_w, UINT16* tiles_h);
 
 inline UINT8* GetScrollTilePtr(UINT16 x, UINT16 y) {
 	//Ensure you have selected scroll_bank before calling this function
@@ -119,6 +119,6 @@ inline UINT8* GetScrollTilePtr(UINT16 x, UINT16 y) {
 
 UINT8 GetScrollTile(UINT16 x, UINT16 y);
 UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile,
-	UINT8 start_x, UINT8 start_y, UINT8 w, UINT8 h,
+	UINT16 start_x, UINT16 start_y, UINT16 w, UINT16 h,
 	UINT16* x, UINT16* y);
 #endif

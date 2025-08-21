@@ -61,8 +61,8 @@ UINT8 scroll_bank;
 UINT8 scroll_offset_x = 0;
 UINT8 scroll_offset_y = 0;
 
-INT8 scroll_h_border = 0;
-UINT8 clamp_enabled = 1;
+INT16 scroll_h_border = 0;
+UINT8 clamp_enabled = TRUE;
 
 INT16 pending_h_x, pending_h_y;
 UINT8 pending_h_i;
@@ -418,7 +418,7 @@ void RefreshScroll(void) {
 }
 
 void MoveScroll(INT16 x, INT16 y) {
-	INT16 current_column, new_column, current_row, new_row;
+	static INT16 current_column, new_column, current_row, new_row;
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
@@ -467,7 +467,7 @@ UINT8 GetScrollTile(UINT16 x, UINT16 y) {
 	return ret;
 }
 
-void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT8* tiles_w, UINT8* tiles_h) {
+void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT16* tiles_w, UINT16* tiles_h) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(map_bank);
 	if (tiles_w) *tiles_w = map->width;
