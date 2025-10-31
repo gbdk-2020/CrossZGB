@@ -114,7 +114,10 @@ ifneq ($(strip $(PLAT)),duck)
 		BINFLAGS += -Wl-yt0x19
 	else
 		# Savegame
-		BINFLAGS += -Wl-yt0x1B -Wl-ya1
+		ifeq ($(strip $(S_BANKS)),)
+			S_BANKS = 1
+		endif
+		BINFLAGS += -Wl-yt0x1B -Wl-ya$(S_BANKS)
 		CFLAGS += -DUSE_SAVEGAME
 	endif
 
@@ -129,7 +132,7 @@ endif
 
 # Compose flags for final binary emission stage
 ifeq ($(strip $(N_BANKS)),)
-	NBANKS = A
+	N_BANKS = A
 endif
 BINFLAGS += $(TARGET) -Wl-j -Wm-yS -autobank -Wl-yo$(N_BANKS) -Wb-ext=.rel $(ADDR_$(PLAT)) $(BINFLAGS_$(EXT)) -Wm-yn$(PROJECT_NAME)
 
