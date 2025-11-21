@@ -16,6 +16,36 @@
 #define SCREEN_WIDTH         (SCREEN_TILES_W << 3)
 #define SCREEN_HEIGHT        (SCREEN_TILES_H << 3)
 
+#define TOP_MOVEMENT_LIMIT    30
+#if defined(MASTERSYSTEM)
+#define SCREEN_BKG_OFFSET_X   1
+
+#define SCREEN_PAD_LEFT       0
+#define SCREEN_PAD_RIGHT      1
+#define SCREEN_PAD_TOP        0
+#define SCREEN_PAD_BOTTOM     2
+
+#define SCREEN_RESTORE_W      16
+#define SCREEN_RESTORE_H      10
+
+#define BOTTOM_MOVEMENT_LIMIT 150
+#else                         
+#define SCREEN_BKG_OFFSET_X   0
+
+#define SCREEN_PAD_LEFT       1
+#define SCREEN_PAD_RIGHT      2
+#define SCREEN_PAD_TOP        1
+#define SCREEN_PAD_BOTTOM     2
+
+#define SCREEN_RESTORE_W      5
+#define SCREEN_RESTORE_H      5
+
+#define BOTTOM_MOVEMENT_LIMIT 100
+#endif
+
+#define SCREEN_TILE_REFRES_W (SCREEN_TILES_W + SCREEN_PAD_LEFT + SCREEN_PAD_RIGHT)
+#define SCREEN_TILE_REFRES_H (SCREEN_TILES_H + SCREEN_PAD_TOP  + SCREEN_PAD_BOTTOM)
+
 typedef enum {
 	TARGET_BKG = 0,
 	TARGET_WIN = 1

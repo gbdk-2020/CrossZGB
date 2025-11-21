@@ -8,44 +8,12 @@
 #include "main.h"
 #include "Palette.h"
 
-#define TOP_MOVEMENT_LIMIT    30
-#if defined(MASTERSYSTEM)
-#define SCREEN_BKG_OFFSET_X   1
-
-#define SCREEN_PAD_LEFT       0
-#define SCREEN_PAD_RIGHT      1
-#define SCREEN_PAD_TOP        0
-#define SCREEN_PAD_BOTTOM     2
-
-#define SCREEN_RESTORE_W      16
-#define SCREEN_RESTORE_H      10
-
-#define BOTTOM_MOVEMENT_LIMIT 150
-#else                         
-#define SCREEN_BKG_OFFSET_X   0
-
-#define SCREEN_PAD_LEFT       1
-#define SCREEN_PAD_RIGHT      2
-#define SCREEN_PAD_TOP        1
-#define SCREEN_PAD_BOTTOM     2
-
-#define SCREEN_RESTORE_W      5
-#define SCREEN_RESTORE_H      5
-
-#define BOTTOM_MOVEMENT_LIMIT 100
-#endif
-
-#define SCREEN_TILE_REFRES_W (SCREEN_TILES_W + SCREEN_PAD_LEFT + SCREEN_PAD_RIGHT)
-#define SCREEN_TILE_REFRES_H (SCREEN_TILES_H + SCREEN_PAD_TOP  + SCREEN_PAD_BOTTOM)
-
 UINT8 scroll_top_movement_limit = TOP_MOVEMENT_LIMIT;
 UINT8 scroll_bottom_movement_limit = BOTTOM_MOVEMENT_LIMIT;
 
-// To be defined on the main app
-UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile);
-
 unsigned char* scroll_map = NULL;
 unsigned char* scroll_cmap = NULL;
+
 INT16 scroll_x = 0;
 INT16 scroll_y = 0;
 INT16 scroll_x_vblank = 0;
@@ -83,49 +51,7 @@ UINT16 hud_map_offset;
 UINT8 tiles_bank_0;
 const struct TilesInfo* tiles_0;
 
-void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
-	static UINT8 replacement;
-	static UINT8 type;
-	c;
-
-	if(((UINT16)x >= scroll_tiles_w) || ((UINT16)y >= scroll_tiles_h)) { //This also checks x < 0 || y < 0
-		replacement = 0;
-	} else {
-		replacement = *t;
-		type = GetTileReplacement(t, &replacement);
-		if(type != 255u) {
-			static UINT16 id;
-			static UINT8 i;
-			id = SPRITE_UNIQUE_ID(x, y);
-			for (i = VECTOR_LEN(sprite_manager_updatables); (i); i--) {
-				Sprite* s = sprite_manager_sprites[sprite_manager_updatables[i]];
-				if ((s->type == type) && (s->unique_id == id)) {
-					break;
-				}
-			}
-			if (i == 0) {
-				UINT8 __save = CURRENT_BANK;
-				SWITCH_ROM(spriteDataBanks[type]);
-				UINT16 sprite_y = ((y + 1) << 3) - spriteDatas[type]->height;
-				SWITCH_ROM(__save);
-				SpriteManagerAdd(type, x << 3, sprite_y);
-			}
-		}
-	}
-
-#if defined(NINTENDO)
-	UINT8* addr = set_bkg_tile_xy(x + scroll_offset_x, y + scroll_offset_y, replacement);
-	#ifdef CGB
-		if (_cpu == CGB_TYPE) {
-			VBK_REG = 1;
-			set_vram_byte(addr, (scroll_cmap) ? *c : scroll_tile_info[replacement]);
-			VBK_REG = 0;
-		}
-	#endif
-#elif defined(SEGA)
-	set_attributed_tile_xy(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, (UINT16)(((scroll_cmap) ? *c : scroll_tile_info[replacement]) << 8) | replacement);
-#endif
-}
+void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c);
 
 UINT16 ScrollSetTiles(UINT8 first_tile, UINT8 tiles_bank, const struct TilesInfo* tiles) {
 	UINT8 i;
