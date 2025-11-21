@@ -104,15 +104,10 @@ static bool process_and_write_data(uint8_t * p_buf) {
                 // size_t data_end   = data_start + SFX_DATA_SZ - 1;
                 char identifier[MAX_STR_LEN];
 
-                int res;
                 if (opt.effectnum == EFFECTNUM_USE_ALL)
-                    res = snprintf(identifier, sizeof(opt.identifier), "%s_%02x", opt.identifier, effectnum);
+                    snprintf(identifier, sizeof(opt.identifier), "%s_%02x", opt.identifier, effectnum);
                 else
-                    res = snprintf(identifier, sizeof(opt.identifier), "%s", opt.identifier);
-
-                if (res)
-                    printf("Warning: truncated identifier to:%s\n",identifier);
-
+                    snprintf(identifier, sizeof(opt.identifier), "%s", opt.identifier);
 
                 if (channels != 0) {
                     if (opt.system == SYSTEM_GB)
