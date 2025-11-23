@@ -7,22 +7,22 @@
 // To be defined on the main app
 UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile);
 
-extern unsigned char* scroll_map;
-extern unsigned char* scroll_cmap;
+// global variables, updated before each call to UPDATE_TILE()
+extern unsigned char* scroll_ptr;
+extern unsigned char* scroll_cptr;
 
-void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
+void UPDATE_TILE(INT16 x, INT16 y) {
 	static UINT8 replacement;
-	static UINT8 type;
-	c;
 
 	if(((UINT16)x >= scroll_tiles_w) || ((UINT16)y >= scroll_tiles_h)) { //This also checks x < 0 || y < 0
 		replacement = 0;
 	} else {
-		replacement = *t;
-		type = GetTileReplacement(t, &replacement);
+		static UINT8 type;
+		replacement = *scroll_ptr;
+		type = GetTileReplacement(scroll_ptr, &replacement);
 		if(type != 255u) {
-			static UINT16 id;
 			static UINT8 i;
+			static UINT16 id;
 			id = SPRITE_UNIQUE_ID(x, y);
 			for (i = VECTOR_LEN(sprite_manager_updatables); (i); i--) {
 				Sprite* s = sprite_manager_sprites[sprite_manager_updatables[i]];
@@ -40,5 +40,5 @@ void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
 		}
 	}
 
-	ScrollSetAttrTileXY(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, replacement, ((scroll_cmap) ? *c : scroll_tile_info[replacement]));
+	ScrollSetAttrTileXY(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, replacement, ((scroll_cptr) ? *scroll_cptr : scroll_tile_info[replacement]));
 }
