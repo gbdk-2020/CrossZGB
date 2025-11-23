@@ -40,16 +40,5 @@ void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
 		}
 	}
 
-#if defined(NINTENDO)
-	UINT8* addr = set_bkg_tile_xy(x + scroll_offset_x, y + scroll_offset_y, replacement);
-	#ifdef CGB
-		if (_cpu == CGB_TYPE) {
-			VBK_REG = 1;
-			set_vram_byte(addr, (scroll_cmap) ? *c : scroll_tile_info[replacement]);
-			VBK_REG = 0;
-		}
-	#endif
-#elif defined(SEGA)
-	set_attributed_tile_xy(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, (UINT16)(((scroll_cmap) ? *c : scroll_tile_info[replacement]) << 8) | replacement);
-#endif
+	ScrollSetAttrTileXY(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, replacement, ((scroll_cmap) ? *c : scroll_tile_info[replacement]));
 }

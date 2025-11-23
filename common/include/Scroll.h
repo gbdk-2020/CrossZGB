@@ -67,6 +67,7 @@ void SetWindowPos(UINT8 x, UINT8 y, UINT8 h);
 #define INIT_HUD_EX(MAP, Y, H)
 #define INIT_HUD(MAP)
 #define HIDE_HUD
+void set_vram_word(uint8_t * addr, uint16_t v) PRESERVES_REGS(iyh, iyl);
 #endif
 
 #define INIT_BKG(MAP) LoadMap(TARGET_BKG, 0, 0, BANK(MAP), &MAP)
@@ -151,4 +152,37 @@ UINT8 GetScrollTile(UINT16 x, UINT16 y);
 UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile,
 	UINT16 start_x, UINT16 start_y, UINT16 w, UINT16 h,
 	UINT16* x, UINT16* y);
+
+inline void ScrollSetAttrTileAddr(UINT8 *addr, UINT8 t, UINT8 c) {
+	c;
+#if defined(NINTENDO)
+	set_vram_byte(addr, t);
+	#if defined(CGB)
+	if (_cpu == CGB_TYPE) {
+		VBK_REG = 1;
+		set_vram_byte(addr, c);
+		VBK_REG = 0;
+	}
+	#endif
+#elif defined(SEGA)
+	set_vram_word(addr, (UINT16)(c << 8) | t);
+#endif
+}
+
+inline void ScrollSetAttrTileXY(UINT8 x, UINT8 y, UINT8 t, UINT8 c) {
+	c;
+#if defined(NINTENDO)
+	UINT8* addr = set_bkg_tile_xy(x, y, t);
+	#if defined(CGB)
+	if (_cpu == CGB_TYPE) {
+		VBK_REG = 1;
+		set_vram_byte(addr, c);
+		VBK_REG = 0;
+	}
+	#endif
+#elif defined(SEGA)
+	set_attributed_tile_xy(x, y, (UINT16)(c << 8) | t);
+#endif
+}
+
 #endif
