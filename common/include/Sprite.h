@@ -36,7 +36,7 @@ typedef struct {
 	struct metasprite_t* mt_sprite;
 
 	// Flags, currently used for mirroring
-	MirroMode mirror;
+	MirrorMode mirror;
 
 	// For the coroutine runner
 	void * ctx;			// pointer to the coroutine context if coroutines are used
