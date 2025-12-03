@@ -242,7 +242,7 @@ void SpriteManagerFlushRemove(void) {
 	sprite_manager_removal_check = FALSE;
 }
 
-UINT8 enable_flickering = 1;
+UINT8 enable_flickering = TRUE;
 UINT8 THIS_IDX = 0;
 Sprite* THIS = NULL;
 void SpriteManagerUpdate(void) {
