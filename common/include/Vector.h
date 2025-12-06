@@ -42,6 +42,7 @@
 #define VECTOR_SET_DIRECT(V, POS, ELEM) ((V[(POS) + 1u]) = (ELEM))
 
 #define LIST(...) {__VA_ARGS__, 0}
+#define LIST_EMPTY {0}
 
 #define DECLARE_VECTOR(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1u] = {0}
 #ifndef NDEBUG
