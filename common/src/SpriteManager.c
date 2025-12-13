@@ -4,6 +4,7 @@
 
 #include "Vector.h"
 #include "SpriteManager.h"
+#include "Math.h"
 #include "Scroll.h"
 #include "ZGBMain.h"
 #include "Flip.h"
@@ -189,7 +190,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	InitSprite(sprite, sprite_type);
 	sprite->x = x;
 	sprite->y = y;
-	sprite->unique_id = SPRITE_UNIQUE_ID(x >> 3, (y + sprite->coll_h - 1) >> 3);
+	sprite->unique_id = SPRITE_UNIQUE_ID(PX_TO_TILE(x), PX_TO_TILE(y + sprite->coll_h - 1));
 
 	//Before calling start THIS and THIS_IDX must be set, preserve the old values
 	cached_sprite = THIS;

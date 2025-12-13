@@ -1,9 +1,8 @@
 #include <gbdk/platform.h>
 #include <gbdk/incbin.h>
 
-#include <gbc_hicolor.h>
-
-#define MIN(A,B) ((A)<(B)?(A):(B))
+#include "gbc_hicolor.h"
+#include "Math.h"
 
 #ifdef CGB
 

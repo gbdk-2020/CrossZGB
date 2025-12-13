@@ -6,6 +6,7 @@
 #include "TilesInfo.h"
 #include "MapInfo.h"
 #include "Sprite.h"
+#include "Math.h"
 
 #define SCREEN_TILES_H       DEVICE_SCREEN_HEIGHT
 #if defined(MASTERSYSTEM)
@@ -13,8 +14,8 @@
 #else
 #define SCREEN_TILES_W       DEVICE_SCREEN_WIDTH
 #endif
-#define SCREEN_WIDTH         (SCREEN_TILES_W << 3)
-#define SCREEN_HEIGHT        (SCREEN_TILES_H << 3)
+#define SCREEN_WIDTH         TILE_TO_PX(SCREEN_TILES_W)
+#define SCREEN_HEIGHT        TILE_TO_PX(SCREEN_TILES_H)
 
 #define TOP_MOVEMENT_LIMIT    30
 #if defined(MASTERSYSTEM)
@@ -60,7 +61,7 @@ void SetWindowPos(UINT8 x, UINT8 y, UINT8 h);
 	SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, (UINT8)(Y), (H))
 #define INIT_HUD(MAP)\
 	GetMapSize(BANK(MAP), &MAP, 0, &scroll_h_border); \
-	scroll_h_border = scroll_h_border << 3; \
+	scroll_h_border = TILE_TO_PX(scroll_h_border); \
 	INIT_HUD_EX(MAP, ((DEVICE_WINDOW_PX_OFFSET_Y + DEVICE_SCREEN_PX_HEIGHT) - scroll_h_border), DEVICE_SCREEN_PX_HEIGHT)
 #define HIDE_HUD SetWindowPos(DEVICE_WINDOW_PX_OFFSET_X, 0, 0)
 #else
@@ -154,7 +155,7 @@ UINT8 ScrollFindTile(UINT8 map_bank, const struct MapInfo* map, UINT8 tile,
 	UINT16* x, UINT16* y);
 
 inline void ScrollSetAttrTileAddr(UINT8 *addr, UINT8 t, UINT8 c) {
-	c;
+	(void)c;
 #if defined(NINTENDO)
 	set_vram_byte(addr, t);
 	#if defined(CGB)
@@ -170,7 +171,7 @@ inline void ScrollSetAttrTileAddr(UINT8 *addr, UINT8 t, UINT8 c) {
 }
 
 inline void ScrollSetAttrTileXY(UINT8 x, UINT8 y, UINT8 t, UINT8 c) {
-	c;
+	(void)c;
 #if defined(NINTENDO)
 	UINT8* addr = set_bkg_tile_xy(x, y, t);
 	#if defined(CGB)

@@ -8,9 +8,6 @@
 #include "main.h"
 #include "Palette.h"
 
-#define MIN(A, B) (((A)<(B))?(A):(B))
-#define MAX(A, B) (((A)>(B))?(A):(B))
-
 UINT8 scroll_top_movement_limit = TOP_MOVEMENT_LIMIT;
 UINT8 scroll_bottom_movement_limit = BOTTOM_MOVEMENT_LIMIT;
 
@@ -177,8 +174,8 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map) {
 	scroll_cmap = map->attributes;
 	scroll_x = 0;
 	scroll_y = 0;
-	scroll_w = scroll_tiles_w << 3;
-	scroll_h = scroll_tiles_h << 3;
+	scroll_w = TILE_TO_PX(scroll_tiles_w);
+	scroll_h = TILE_TO_PX(scroll_tiles_h);
 	scroll_bank = map_bank;
 	if (scroll_target) {
 		scroll_x = scroll_target->x - (SCREEN_WIDTH >> 1);
@@ -223,9 +220,9 @@ void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
 void ScrollScreenRedraw(void) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-		INT16 y = scroll_y >> 3;
+		INT16 y = PX_TO_TILE(scroll_y);
 		for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
-			ScrollUpdateRow((scroll_x >> 3) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
+			ScrollUpdateRow(PX_TO_TILE(scroll_x) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
 		}
 	SWITCH_ROM(__save);
 }
@@ -283,7 +280,8 @@ void ScrollUpdateRow(INT16 x, INT16 y) {
 		scroll_cptr = NULL;
 	#endif
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
 	for (UINT8 i = SCREEN_TILE_REFRES_W; (i); --i) {
 		UPDATE_TILE(x++, y);
@@ -334,7 +332,8 @@ void ScrollUpdateColumn(INT16 x, INT16 y) {
 		scroll_cptr = NULL;
 	#endif
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
 	for (UINT8 i = SCREEN_TILE_REFRES_H; (i); --i) {
 		UPDATE_TILE(x, y++);
@@ -360,18 +359,19 @@ void RefreshScroll(void) {
 void MoveScroll(INT16 x, INT16 y) {
 	static INT16 current_column, new_column, current_row, new_row;
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
 
-	current_column = scroll_x >> 3;
-	current_row    = scroll_y >> 3;
+	current_column = PX_TO_TILE(scroll_x);
+	current_row    = PX_TO_TILE(scroll_y);
 
 	scroll_x = x;
 	scroll_y = y;
 	ClampScrollLimits();
 
-	new_column     = scroll_x >> 3;
-	new_row        = scroll_y >> 3;
+	new_column     = PX_TO_TILE(scroll_x);
+	new_row        = PX_TO_TILE(scroll_y);
 
 	if (current_column != new_column) {
 		if (new_column > current_column) {

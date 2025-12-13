@@ -1,5 +1,6 @@
 #include "main.h"
 
+#include "Math.h"
 #include "Sprite.h"
 #include "Scroll.h"
 
@@ -19,9 +20,9 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 		}
 		
 		//Check tile change
-		tmp = pivot_x >> 3;
+		tmp = PX_TO_TILE(pivot_x);
 		pivot_x += x;
-		start_tile_x = pivot_x >> 3;
+		start_tile_x = PX_TO_TILE(pivot_x);
 		if(tmp == start_tile_x) {
 			goto inc_x;
 		}
@@ -38,7 +39,7 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 			else 
 				start_tile_y = scroll_tiles_h - 1;
 		} else {
-			start_tile_y = sprite->y >> 3;
+			start_tile_y = PX_TO_TILE(sprite->y);
 		}
 
 		//end_tile_y clamped between scroll limits
@@ -49,7 +50,7 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 			else  
 				end_tile_y = scroll_tiles_h - 1;
 		}	else {
-			end_tile_y = pivot_y >> 3;
+			end_tile_y = PX_TO_TILE(pivot_y);
 		}
 
 		UINT8 __save = CURRENT_BANK;
@@ -60,9 +61,9 @@ UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
 		for(tmp = start_tile_y; tmp != end_tile_y; tmp ++, tile_coll += scroll_tiles_w) {
 			if(scroll_collisions[*tile_coll] & scroll_coll_group) {
 				if(x > 0) {
-					sprite->x = (start_tile_x << 3) - sprite->coll_w;
+					sprite->x = TILE_TO_PX(start_tile_x) - sprite->coll_w;
 				} else {
-					sprite->x = (start_tile_x + 1) << 3;
+					sprite->x = TILE_TO_PX(start_tile_x + 1);
 				}
 
 				ret = *tile_coll;
@@ -85,9 +86,9 @@ done_x:
 		}
 
 		//Check tile change
-		tmp = pivot_y >> 3;
+		tmp = PX_TO_TILE(pivot_y);
 		pivot_y += y;
-		start_tile_y = pivot_y >> 3;
+		start_tile_y = PX_TO_TILE(pivot_y);
 		if(tmp == start_tile_y) {
 			goto inc_y;
 		}
@@ -104,7 +105,7 @@ done_x:
 			else 
 				start_tile_x = scroll_tiles_w - 1;
 		}	else { 
-			start_tile_x = (sprite->x >> 3);
+			start_tile_x = PX_TO_TILE(sprite->x);
 		}
 
 		//end_tile_x clamped between scroll limits
@@ -115,7 +116,7 @@ done_x:
 			else 
 				end_tile_x = scroll_tiles_w - 1;
 		}	else {
-			end_tile_x = (pivot_x >> 3);
+			end_tile_x = PX_TO_TILE(pivot_x);
 		}
 
 		UINT8 __save = CURRENT_BANK;
@@ -126,9 +127,9 @@ done_x:
 		for(tmp = start_tile_x; tmp != end_tile_x; tmp ++, tile_coll += 1) {
 			if(scroll_collisions[*tile_coll] & scroll_coll_group) {
 				if(y > 0) {
-					sprite->y = (start_tile_y << 3) - sprite->coll_h;
+					sprite->y = TILE_TO_PX(start_tile_y) - sprite->coll_h;
 				} else {
-					sprite->y = (start_tile_y + 1) << 3;
+					sprite->y = TILE_TO_PX(start_tile_y + 1);
 				}
 
 				ret = *tile_coll;

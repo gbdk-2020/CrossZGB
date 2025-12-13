@@ -2,6 +2,7 @@
 #include "Scroll.h"
 #include "Sprite.h"
 #include "SpriteManager.h"
+#include "Math.h"
 #include "main.h"
 
 // To be defined on the main app
@@ -33,9 +34,9 @@ void UPDATE_TILE(INT16 x, INT16 y) {
 			if (i == 0) {
 				UINT8 __save = CURRENT_BANK;
 				SWITCH_ROM(spriteDataBanks[type]);
-				UINT16 sprite_y = ((y + 1) << 3) - spriteDatas[type]->height;
+				UINT16 sprite_y = TILE_TO_PX(y + 1) - spriteDatas[type]->height;
 				SWITCH_ROM(__save);
-				SpriteManagerAdd(type, x << 3, sprite_y);
+				SpriteManagerAdd(type, TILE_TO_PX(x), sprite_y);
 			}
 		}
 	}
