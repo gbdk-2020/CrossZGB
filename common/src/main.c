@@ -98,7 +98,7 @@ void main(void) {
 
 		state_running = TRUE;
 		current_state = next_state;
-		scroll_target = 0;
+		scroll_target = NULL;
 		last_tile_loaded = 0;
 #if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
 		last_bg_pal_loaded = 0;
