@@ -128,6 +128,7 @@ typedef enum {
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down);
 void ScrollCollisionsReset(void);
 void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list);
+void ScrollInitCollisionGroupVector(UINT8 group, const UINT8* coll_vector);
 void ScrollScreenRedraw(void);
 
 void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_list, const UINT8* coll_list_down);

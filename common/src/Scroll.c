@@ -206,6 +206,10 @@ void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list) {
 		scroll_collisions[*ptr] |= group;
 }
 
+void ScrollInitCollisionGroupVector(UINT8 group, const UINT8* coll_vector) {
+	UINT8 idx, v;
+	VECTOR_ITERATE(coll_vector, idx, v) scroll_collisions[v] |= group;
+}
 
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
 	ScrollCollisionsReset();
