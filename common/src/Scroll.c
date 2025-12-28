@@ -202,13 +202,16 @@ void ScrollCollisionsReset(void) {
 }
 
 void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list) {
-	for(const UINT8 * ptr = coll_list; (*ptr); ptr++) 
+	for (const UINT8 * ptr = coll_list; (*ptr); ptr++) 
 		scroll_collisions[*ptr] |= group;
 }
 
 void ScrollInitCollisionGroupVector(UINT8 group, const UINT8* coll_vector) {
-	UINT8 idx, v;
-	VECTOR_ITERATE(coll_vector, idx, v) scroll_collisions[v] |= group;
+	for (UINT8 idx = *coll_vector++; (idx); --idx) scroll_collisions[*coll_vector++] |= group;
+}
+
+void ScrollRemoveCollisionGroupVector(UINT8 group, const UINT8* coll_vector) {
+	for (UINT8 idx = *coll_vector++; (idx); --idx) scroll_collisions[*coll_vector++] &= ~group;
 }
 
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
