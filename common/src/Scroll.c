@@ -8,72 +8,44 @@
 #include "main.h"
 #include "Palette.h"
 
-#define TOP_MOVEMENT_LIMIT    30
-#if defined(MASTERSYSTEM)
-#define SCREEN_BKG_OFFSET_X   1
-
-#define SCREEN_PAD_LEFT       0
-#define SCREEN_PAD_RIGHT      1
-#define SCREEN_PAD_TOP        0
-#define SCREEN_PAD_BOTTOM     2
-
-#define SCREEN_RESTORE_W      16
-#define SCREEN_RESTORE_H      10
-
-#define BOTTOM_MOVEMENT_LIMIT 150
-#else                         
-#define SCREEN_BKG_OFFSET_X   0
-
-#define SCREEN_PAD_LEFT       1
-#define SCREEN_PAD_RIGHT      2
-#define SCREEN_PAD_TOP        1
-#define SCREEN_PAD_BOTTOM     2
-
-#define SCREEN_RESTORE_W      5
-#define SCREEN_RESTORE_H      5
-
-#define BOTTOM_MOVEMENT_LIMIT 100
-#endif
-
-#define SCREEN_TILE_REFRES_W (SCREEN_TILES_W + SCREEN_PAD_LEFT + SCREEN_PAD_RIGHT)
-#define SCREEN_TILE_REFRES_H (SCREEN_TILES_H + SCREEN_PAD_TOP  + SCREEN_PAD_BOTTOM)
-
 UINT8 scroll_top_movement_limit = TOP_MOVEMENT_LIMIT;
 UINT8 scroll_bottom_movement_limit = BOTTOM_MOVEMENT_LIMIT;
 
-// To be defined on the main app
-UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile);
+unsigned char* scroll_map = NULL;
+unsigned char* scroll_cmap = NULL;
 
-unsigned char* scroll_map = 0;
-unsigned char* scroll_cmap = 0;
 INT16 scroll_x = 0;
 INT16 scroll_y = 0;
 INT16 scroll_x_vblank = 0;
 INT16 scroll_y_vblank = 0;
+
 UINT16 scroll_w;
 UINT16 scroll_h;
 UINT16 scroll_tiles_w;
 UINT16 scroll_tiles_h;
-Sprite* scroll_target = 0;
+
+Sprite* scroll_target = NULL;
+
 UINT8 scroll_collisions[256];
 UINT8 scroll_tile_info[256];
 UINT8 scroll_bank;
 UINT8 scroll_offset_x = 0;
 UINT8 scroll_offset_y = 0;
 
-INT8 scroll_h_border = 0;
-UINT8 clamp_enabled = 1;
+INT16 scroll_h_border = 0;
+UINT8 clamp_enabled = TRUE;
 
 INT16 pending_h_x, pending_h_y;
 UINT8 pending_h_i;
-unsigned char* pending_h_map = 0;
-unsigned char* pending_w_map = 0;
-#ifdef CGB
-unsigned char* pending_h_cmap = 0;
-unsigned char* pending_w_cmap = 0;
-#endif
 INT16 pending_w_x, pending_w_y;
 UINT8 pending_w_i;
+
+unsigned char* pending_h_map = NULL;
+unsigned char* pending_w_map = NULL;
+#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+unsigned char* pending_h_cmap = NULL;
+unsigned char* pending_w_cmap = NULL;
+#endif
 
 UINT8 last_tile_loaded = 0;
 
@@ -83,49 +55,12 @@ UINT16 hud_map_offset;
 UINT8 tiles_bank_0;
 const struct TilesInfo* tiles_0;
 
-void UPDATE_TILE(INT16 x, INT16 y, UINT8* t, UINT8* c) {
-	static UINT8 replacement;
-	static UINT8 type;
-	c;
+// UPDATE_TILE() function and its parameters as global variables
+unsigned char* scroll_ptr;
+unsigned char* scroll_cptr;
 
-	if(((UINT16)x >= scroll_tiles_w) || ((UINT16)y >= scroll_tiles_h)) { //This also checks x < 0 || y < 0
-		replacement = 0;
-	} else {
-		replacement = *t;
-		type = GetTileReplacement(t, &replacement);
-		if(type != 255u) {
-			static UINT16 id;
-			static UINT8 i;
-			id = SPRITE_UNIQUE_ID(x, y);
-			for (i = VECTOR_LEN(sprite_manager_updatables); (i); i--) {
-				Sprite* s = sprite_manager_sprites[sprite_manager_updatables[i]];
-				if ((s->type == type) && (s->unique_id == id)) {
-					break;
-				}
-			}
-			if (i == 0) {
-				UINT8 __save = CURRENT_BANK;
-				SWITCH_ROM(spriteDataBanks[type]);
-				UINT16 sprite_y = ((y + 1) << 3) - spriteDatas[type]->height;
-				SWITCH_ROM(__save);
-				SpriteManagerAdd(type, x << 3, sprite_y);
-			}
-		}
-	}
+void UPDATE_TILE(INT16 x, INT16 y);
 
-#if defined(NINTENDO)
-	UINT8* addr = set_bkg_tile_xy(x + scroll_offset_x, y + scroll_offset_y, replacement);
-	#ifdef CGB
-		if (_cpu == CGB_TYPE) {
-			VBK_REG = 1;
-			set_vram_byte(addr, (scroll_cmap) ? *c : scroll_tile_info[replacement]);
-			VBK_REG = 0;
-		}
-	#endif
-#elif defined(SEGA)
-	set_attributed_tile_xy(SCREEN_BKG_OFFSET_X + x + scroll_offset_x, y + scroll_offset_y, (UINT16)(((scroll_cmap) ? *c : scroll_tile_info[replacement]) << 8) | replacement);
-#endif
-}
 
 UINT16 ScrollSetTiles(UINT8 first_tile, UINT8 tiles_bank, const struct TilesInfo* tiles) {
 	UINT8 i;
@@ -177,24 +112,14 @@ UINT16 ScrollSetTiles(UINT8 first_tile, UINT8 tiles_bank, const struct TilesInfo
 	return offset;
 }
 
-void UpdateMapTile(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT16 map_offset, UINT8 data, UINT8* attr)
-{
-attr;
+void UpdateMapTile(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT16 map_offset, UINT8 data, UINT8* attr) {
 #if defined(NINTENDO)
-	UINT8* addr = (bg_or_win == TARGET_BKG) ? set_bkg_tile_xy(x, y, (UINT8)map_offset + data) : set_win_tile_xy(x, y, (UINT8)map_offset + data);
-	#if defined(CGB)
-	if (_cpu == CGB_TYPE) {
-		VBK_REG = 1;
-		set_vram_byte(addr, (attr) ? *attr : (UINT8)(map_offset >> 8) + scroll_tile_info[(UINT8)map_offset + data]);
-		VBK_REG = 0;
-	}
-	#endif
+	UINT8* addr = (bg_or_win == TARGET_BKG) ? get_bkg_xy_addr(x, y) : get_win_xy_addr(x, y);
 #elif defined(SEGA)
 	if (bg_or_win != TARGET_BKG) return;
-
-	UINT8 c = ((UINT8)(map_offset >> 8)) + ((attr) ? *attr : scroll_tile_info[data]);
-	set_attributed_tile_xy(SCREEN_BKG_OFFSET_X + x, y, (UINT16)(c << 8) | ((UINT8)map_offset + data));
+	UINT8 * addr = get_bkg_xy_addr(x, y);
 #endif
+	ScrollSetAttrTileAddr(addr, (UINT8)map_offset + data, (attr) ? *attr : (UINT8)(map_offset >> 8) + scroll_tile_info[(UINT8)map_offset + data]);
 }
 
 UINT16 LoadMap(UINT8 bg_or_win, UINT8 x, UINT8 y, UINT8 map_bank, struct MapInfo* map) {
@@ -249,8 +174,8 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map) {
 	scroll_cmap = map->attributes;
 	scroll_x = 0;
 	scroll_y = 0;
-	scroll_w = scroll_tiles_w << 3;
-	scroll_h = scroll_tiles_h << 3;
+	scroll_w = TILE_TO_PX(scroll_tiles_w);
+	scroll_h = TILE_TO_PX(scroll_tiles_h);
 	scroll_bank = map_bank;
 	if (scroll_target) {
 		scroll_x = scroll_target->x - (SCREEN_WIDTH >> 1);
@@ -277,10 +202,17 @@ void ScrollCollisionsReset(void) {
 }
 
 void ScrollInitCollisionGroup(UINT8 group, const UINT8* coll_list) {
-	for(const UINT8 * ptr = coll_list; (*ptr); ptr++) 
+	for (const UINT8 * ptr = coll_list; (*ptr); ptr++) 
 		scroll_collisions[*ptr] |= group;
 }
 
+void ScrollInitCollisionGroupVector(UINT8 group, const UINT8* coll_vector) {
+	for (UINT8 idx = *coll_vector++; (idx); --idx) scroll_collisions[*coll_vector++] |= group;
+}
+
+void ScrollRemoveCollisionGroupVector(UINT8 group, const UINT8* coll_vector) {
+	for (UINT8 idx = *coll_vector++; (idx); --idx) scroll_collisions[*coll_vector++] &= ~group;
+}
 
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
 	ScrollCollisionsReset();
@@ -295,9 +227,9 @@ void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down) {
 void ScrollScreenRedraw(void) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-		INT16 y = scroll_y >> 3;
+		INT16 y = PX_TO_TILE(scroll_y);
 		for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H) && y != scroll_h; ++i, y++) {
-			ScrollUpdateRow((scroll_x >> 3) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
+			ScrollUpdateRow(PX_TO_TILE(scroll_x) - SCREEN_PAD_LEFT,  y - SCREEN_PAD_TOP);
 		}
 	SWITCH_ROM(__save);
 }
@@ -317,92 +249,104 @@ void InitScroll(UINT8 map_bank, const struct MapInfo* map, const UINT8* coll_lis
 }
 
 void ScrollUpdateRowR(void) {
-	for (UINT8 i = 0u; i != SCREEN_RESTORE_W && pending_w_i != 0; ++i, --pending_w_i)  {
-		#ifdef CGB
-		UPDATE_TILE(pending_w_x++, pending_w_y, pending_w_map++, pending_w_cmap++);
-		#else
-		UPDATE_TILE(pending_w_x++, pending_w_y, pending_w_map++, 0);
+	scroll_ptr = pending_w_map;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+		scroll_cptr = pending_w_cmap;
+	#else
+		scroll_cptr = NULL;
+	#endif
+	for (UINT8 i = MAX(SCREEN_RESTORE_W, pending_w_i); (i); --i) {
+		UPDATE_TILE(pending_w_x++, pending_w_y);
+		scroll_ptr++;
+		#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+			if (scroll_cptr) scroll_cptr++;
 		#endif
 	}
+	pending_w_i = 0;
 }
 
 void ScrollUpdateRowWithDelay(INT16 x, INT16 y) {
-	while (pending_w_i) {
-		ScrollUpdateRowR();
-	}
+	if (pending_w_i) ScrollUpdateRowR();
 
 	pending_w_i = SCREEN_TILE_REFRES_W;
 
-	UINT16 delta = scroll_tiles_w * (pending_w_y = y) + (pending_w_x = x);
-	pending_w_map = scroll_map + delta;
-	#ifdef CGB
-	pending_w_cmap = scroll_cmap + delta;
+	UINT16 offset = scroll_tiles_w * (pending_w_y = y) + (pending_w_x = x);
+	pending_w_map = scroll_map + offset;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+	pending_w_cmap = (scroll_cmap) ? (scroll_cmap + offset) : NULL;
 	#endif
 }
 
 void ScrollUpdateRow(INT16 x, INT16 y) {
 	UINT16 offset = scroll_tiles_w * y + x;
-	unsigned char* map = scroll_map + offset;
-	#ifdef CGB
-	unsigned char* cmap = scroll_cmap + offset;
+
+	scroll_ptr = scroll_map + offset;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+		scroll_cptr = (scroll_cmap) ? (scroll_cmap + offset) : NULL;
+	#else 
+		scroll_cptr = NULL;
 	#endif
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-	for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_W); ++i) {
-		#ifdef CGB
-		UPDATE_TILE(x + i, y, map ++, cmap ++);
-		#else
-		UPDATE_TILE(x + i, y, map ++, 0);
+	for (UINT8 i = SCREEN_TILE_REFRES_W; (i); --i) {
+		UPDATE_TILE(x++, y);
+		scroll_ptr++;
+		#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+			if (scroll_cptr) scroll_cptr++;
 		#endif
 	}
 	SWITCH_ROM(__save);
 }
 
 void ScrollUpdateColumnR(void) {
-	for (UINT8 i = 0u; i != SCREEN_RESTORE_H && pending_h_i != 0; ++i, pending_h_i --) {
-		#ifdef CGB
-		UPDATE_TILE(pending_h_x, pending_h_y ++, pending_h_map, pending_h_cmap);
-		pending_h_map += scroll_tiles_w;
-		pending_h_cmap += scroll_tiles_w;
-		#else
-		UPDATE_TILE(pending_h_x, pending_h_y ++, pending_h_map, 0);
-		pending_h_map += scroll_tiles_w;
+	scroll_ptr = pending_h_map;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+		scroll_cptr = pending_h_cmap;
+	#else
+		scroll_cptr = NULL;
+	#endif
+	for (UINT8 i = MAX(SCREEN_RESTORE_H, pending_h_i); (i); --i) {
+		UPDATE_TILE(pending_h_x, pending_h_y++);
+		scroll_ptr += scroll_tiles_w;
+		#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+			if (scroll_cptr) scroll_cptr += scroll_tiles_w;
 		#endif
 	}
+	pending_h_i = 0;
 }
 
 void ScrollUpdateColumnWithDelay(INT16 x, INT16 y) {
-	while (pending_h_i) {
-		ScrollUpdateColumnR();
-	}
+	if (pending_h_i) ScrollUpdateColumnR();
 
 	pending_h_i = SCREEN_TILE_REFRES_H;
 
-	UINT16 delta = scroll_tiles_w * (pending_h_y = y) + (pending_h_x = x);
-	pending_h_map = scroll_map + delta;
-	#ifdef CGB
-	pending_h_cmap = scroll_cmap + delta;
+	UINT16 offset = scroll_tiles_w * (pending_h_y = y) + (pending_h_x = x);
+	pending_h_map = scroll_map + offset;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+	pending_h_cmap = (scroll_cmap) ? (scroll_cmap + offset) : NULL;
 	#endif
 }
 
 void ScrollUpdateColumn(INT16 x, INT16 y) {
 	UINT16 offset = scroll_tiles_w * y + x;
-	unsigned char* map = scroll_map + offset;
-	#ifdef CGB
-	unsigned char* cmap = scroll_cmap + offset;
+
+	scroll_ptr = scroll_map + offset;
+	#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+		scroll_cptr = (scroll_cmap) ? (scroll_cmap + offset) : NULL;
+	#else
+		scroll_cptr = NULL;
 	#endif
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
-	for (UINT8 i = 0u; i != (SCREEN_TILE_REFRES_H); ++i) {
-		#ifdef CGB
-		UPDATE_TILE(x, y + i, map, cmap);
-		map += scroll_tiles_w;
-		cmap += scroll_tiles_w;
-		#else
-		UPDATE_TILE(x, y + i, map, 0);
-		map += scroll_tiles_w;
+	for (UINT8 i = SCREEN_TILE_REFRES_H; (i); --i) {
+		UPDATE_TILE(x, y++);
+		scroll_ptr += scroll_tiles_w;
+		#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+			if (scroll_ptr) scroll_ptr += scroll_tiles_w;
 		#endif
 	}
 	SWITCH_ROM(__save);
@@ -420,20 +364,21 @@ void RefreshScroll(void) {
 }
 
 void MoveScroll(INT16 x, INT16 y) {
-	INT16 current_column, new_column, current_row, new_row;
+	static INT16 current_column, new_column, current_row, new_row;
 
-	UINT8 __save = CURRENT_BANK;
+	static UINT8 __save;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(scroll_bank);
 
-	current_column = scroll_x >> 3;
-	current_row    = scroll_y >> 3;
+	current_column = PX_TO_TILE(scroll_x);
+	current_row    = PX_TO_TILE(scroll_y);
 
 	scroll_x = x;
 	scroll_y = y;
 	ClampScrollLimits();
 
-	new_column     = scroll_x >> 3;
-	new_row        = scroll_y >> 3;
+	new_column     = PX_TO_TILE(scroll_x);
+	new_row        = PX_TO_TILE(scroll_y);
 
 	if (current_column != new_column) {
 		if (new_column > current_column) {
@@ -469,7 +414,7 @@ UINT8 GetScrollTile(UINT16 x, UINT16 y) {
 	return ret;
 }
 
-void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT8* tiles_w, UINT8* tiles_h) {
+void GetMapSize(UINT8 map_bank, const struct MapInfo* map, UINT16* tiles_w, UINT16* tiles_h) {
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(map_bank);
 	if (tiles_w) *tiles_w = map->width;

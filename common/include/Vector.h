@@ -31,7 +31,7 @@
 
 #define VECTOR_DECLARE(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1u]
 #define VECTOR(...) {PP_NARG(__VA_ARGS__), __VA_ARGS__}
-#define VECTOR_ITERATE(V, IDX, ELEM) for(IDX = 0, ELEM = V[1]; IDX < V_LEN(V); IDX++, ELEM = V[IDX + 1u])
+#define VECTOR_ITERATE(V, IDX, ELEM) for(IDX = 0, ELEM = V[1]; IDX < VECTOR_LEN(V); IDX++, ELEM = V[IDX + 1u])
 #define VECTOR_LEN(V) (V[0])
 #define VECTOR_CLEAR(V) (V[0]=0)
 #define VECTOR_GET(V, POS) (V[(POS) + 1u])
@@ -42,6 +42,7 @@
 #define VECTOR_SET_DIRECT(V, POS, ELEM) ((V[(POS) + 1u]) = (ELEM))
 
 #define LIST(...) {__VA_ARGS__, 0}
+#define LIST_EMPTY {0}
 
 #define DECLARE_VECTOR(NAME, NUM_ELEMS) UINT8 NAME[NUM_ELEMS + 1u] = {0}
 #ifndef NDEBUG

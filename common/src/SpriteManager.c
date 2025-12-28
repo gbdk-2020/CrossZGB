@@ -4,6 +4,7 @@
 
 #include "Vector.h"
 #include "SpriteManager.h"
+#include "Math.h"
 #include "Scroll.h"
 #include "ZGBMain.h"
 #include "Flip.h"
@@ -71,7 +72,7 @@ void SpriteManagerReset(void) {
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);
-	sprite_manager_removal_check = 0;
+	sprite_manager_removal_check = FALSE;
 }
 
 void SpriteManagerLoad(UINT8 sprite_type) {
@@ -179,7 +180,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	sprite_idx = StackPop(sprite_manager_sprites_pool);
 	sprite = sprite_manager_sprites[sprite_idx];
 	sprite->type = sprite_type;
-	sprite->marked_for_removal = 0;
+	sprite->marked_for_removal = FALSE;
 	sprite->lim_x = SPRITE_LIMIT_X;
 	sprite->lim_y = SPRITE_LIMIT_Y;
 	sprite->mirror = NO_MIRROR;
@@ -189,7 +190,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	InitSprite(sprite, sprite_type);
 	sprite->x = x;
 	sprite->y = y;
-	sprite->unique_id = SPRITE_UNIQUE_ID(x >> 3, (y + sprite->coll_h - 1) >> 3);
+	sprite->unique_id = SPRITE_UNIQUE_ID(PX_TO_TILE(x), PX_TO_TILE(y + sprite->coll_h - 1));
 
 	//Before calling start THIS and THIS_IDX must be set, preserve the old values
 	cached_sprite = THIS;
@@ -209,13 +210,13 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 }
 
 void SpriteManagerRemove(UINT8 idx) {
-	sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, idx)]->marked_for_removal = 1;
-	sprite_manager_removal_check = 1;
+	sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, idx)]->marked_for_removal = TRUE;
+	sprite_manager_removal_check = TRUE;
 }
 
 void SpriteManagerRemoveSprite(Sprite* sprite) {
-	sprite->marked_for_removal = 1;
-	sprite_manager_removal_check = 1;
+	sprite->marked_for_removal = TRUE;
+	sprite_manager_removal_check = TRUE;
 }
 
 void SpriteManagerFlushRemove(void) {
@@ -239,10 +240,10 @@ void SpriteManagerFlushRemove(void) {
 	}
 	VECTOR_LEN(sprite_manager_updatables) = current;
 	SWITCH_ROM(__save);
-	sprite_manager_removal_check = 0;
+	sprite_manager_removal_check = FALSE;
 }
 
-UINT8 enable_flickering = 1;
+UINT8 enable_flickering = TRUE;
 UINT8 THIS_IDX = 0;
 Sprite* THIS = NULL;
 void SpriteManagerUpdate(void) {

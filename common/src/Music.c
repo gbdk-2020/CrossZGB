@@ -133,7 +133,6 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 		gbt_play(music, bank, 7);
 		gbt_loop(loop);
 #elif defined(MUSIC_DRIVER_HUGE)
-		INIT_SOUND();
 		SWITCH_ROM(bank);
 		hUGE_init(music);
 #elif defined(MUSIC_DRIVER_PSGLIB)

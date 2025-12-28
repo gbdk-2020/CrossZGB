@@ -36,7 +36,7 @@ typedef struct {
 	struct metasprite_t* mt_sprite;
 
 	// Flags, currently used for mirroring
-	MirroMode mirror;
+	MirrorMode mirror;
 
 	// For the coroutine runner
 	void * ctx;			// pointer to the coroutine context if coroutines are used
@@ -44,13 +44,18 @@ typedef struct {
 	// For the sprite manager
 	INT16 lim_x, lim_y;             // limits offscren where the sprite will be deleted (0 means immediatelly)
 	UINT8 type;                     // sprite type (enemy, bullet, etc.)
-	UINT8 marked_for_removal;
+	UINT8 marked_for_removal;       // sprite should be removed at cleanup
 	UINT16 unique_id;               // unique ID, based on the tile, sprite spawned at
 
-	UINT8 visible;                  // visibility (sprite is not rendered if zero)
+	// Sprite flags
+	UINT8 visible         : 1;      // sprite visibility
+	UINT8 persistent      : 1;      // don't destroy sprite when offscreen
+
+	// Collision handling
 	UINT8 coll_group;               // collision group
 	UINT8 coll_group_down;          // collision group when moving down
 
+	// User defined data
 	UINT8 custom_data[CUSTOM_DATA_SIZE];
 } Sprite;
 
@@ -85,7 +90,10 @@ inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
 	}
 }
 inline void SetVisible(Sprite* sprite, UINT8 visible) {
-	sprite->visible = visible;
+	sprite->visible = (visible);
+}
+inline void SetPersistent(Sprite* sprite, UINT8 persistent) {
+	sprite->persistent = (persistent);
 }
 
 void DrawSprite(void);

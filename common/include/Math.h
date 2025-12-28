@@ -15,6 +15,14 @@
 #define UNSET_BIT_MASK(N, MASK) ((N) &= ~(MASK))
 #define GET_BIT_MASK(N, MASK) ((N) & (MASK))
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define ABS(a) (((a) < 0) ? -(a) : (a))
+#define CLAMP(a, min, max) (((a) < (min)) ? (min) : (((a) > (max)) ? (max) : (a)))
+
+#define PX_TO_TILE(A) ((A)>>3)
+#define TILE_TO_PX(A) ((A)<<3)
+
 inline INT16 DespRight(INT16 a, UINT8 b) {
 	return a >> b;
 }

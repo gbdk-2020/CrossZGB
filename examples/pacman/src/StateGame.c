@@ -8,6 +8,7 @@
 
 #include "lee.h"
 #include "bankutils.h"
+#include "savegame.h"
 
 IMPORT_MAP(level01);
 IMPORT_MAP(level02);
@@ -158,4 +159,10 @@ void UPDATE(void) {
 }
 
 void DESTROY(void) {
+#ifdef USE_SAVEGAME
+	ENABLE_RAM;
+	SWITCH_RAM(0);
+	if (game_score > savegame.best_score) savegame.best_score = game_score;
+	DISABLE_RAM;
+#endif
 }

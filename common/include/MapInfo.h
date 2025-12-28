@@ -5,8 +5,8 @@
 
 struct MapInfo {
 	unsigned char* data;
-	unsigned char width;
-	unsigned char height;
+	unsigned int width;
+	unsigned int height;
 	unsigned char* attributes;
 
 	unsigned char tiles_bank; // bank of TileInfo struct with the unique tiles 

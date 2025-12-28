@@ -8,7 +8,9 @@ extern joypads_t joypads, old_joypads;
 #define previous_keys (old_joypads.joy0)
 #define keys (joypads.joy0)
 
-#define INIT_KEYS() joypad_init(4, &joypads)
+inline void INIT_KEYS(void) {
+	joypad_init(4, &joypads);
+}
 
 inline void UPDATE_KEYS(void) {
 	old_joypads.joy0 = joypads.joy0, old_joypads.joy1 = joypads.joy1, old_joypads.joy2 = joypads.joy2, old_joypads.joy3 = joypads.joy3;

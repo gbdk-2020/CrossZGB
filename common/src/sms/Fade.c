@@ -7,9 +7,6 @@
 palette_color_t ZGB_Fading_BPal[16];
 palette_color_t ZGB_Fading_SPal[16];
 
-#define MIN(A,B) ((A)<(B)?(A):(B))
-#define MAX(A,B) ((A)>(B)?(A):(B))
-
 palette_color_t UpdateColor(UINT8 i, palette_color_t col) {
 	INT8 BR = PAL_RED(ZGB_Fading_SPal[0]), BG = PAL_GREEN(ZGB_Fading_SPal[0]), BB = PAL_BLUE(ZGB_Fading_SPal[0]);
 	INT8 R = PAL_RED(col), G = PAL_GREEN(col), B = PAL_BLUE(col);

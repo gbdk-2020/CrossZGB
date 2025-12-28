@@ -13,7 +13,7 @@ typedef enum {
 	FLIP_X    = 2,
 	HV_MIRROR = 4,
 	FLIP_XY   = 4
-} MirroMode;
+} MirrorMode;
 
 #if defined(SEGA)
 void set_sprite_data_flip(UINT8 first_tile, UINT8 nb_tiles, const UINT8 *data, UINT8 flip);

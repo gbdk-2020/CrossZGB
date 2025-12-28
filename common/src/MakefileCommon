@@ -82,7 +82,7 @@ FLAGSPNG2ASSET_SPR += $(PNG2ASSET_SPR_$(EXT))
 
 PNG2ASSET_BKG_gb = -noflip
 PNG2ASSET_BKG_duck = $(PNG2ASSET_BKG_gb)
-PNG2ASSET_BKG_gg = -noflip -pack_mode sms -bpp 4 -keep_palette_order
+PNG2ASSET_BKG_gg = -pack_mode sms -bpp 4 -keep_palette_order
 PNG2ASSET_BKG_sms = $(PNG2ASSET_SPR_gg)
 FLAGSPNG2ASSET_BKG += $(PNG2ASSET_BKG_$(EXT))
 
@@ -114,7 +114,10 @@ ifneq ($(strip $(PLAT)),duck)
 		BINFLAGS += -Wl-yt0x19
 	else
 		# Savegame
-		BINFLAGS += -Wl-yt0x1B -Wl-ya1
+		ifeq ($(strip $(S_BANKS)),)
+			S_BANKS = 1
+		endif
+		BINFLAGS += -Wl-yt0x1B -Wl-ya$(S_BANKS)
 		CFLAGS += -DUSE_SAVEGAME
 	endif
 
@@ -129,7 +132,7 @@ endif
 
 # Compose flags for final binary emission stage
 ifeq ($(strip $(N_BANKS)),)
-	NBANKS = A
+	N_BANKS = A
 endif
 BINFLAGS += $(TARGET) -Wl-j -Wm-yS -autobank -Wl-yo$(N_BANKS) -Wb-ext=.rel $(ADDR_$(PLAT)) $(BINFLAGS_$(EXT)) -Wm-yn$(PROJECT_NAME)
 
@@ -385,23 +388,22 @@ $(OBJDIR_ZGB)/%.o: $(ZGB_PATH_UNIX)/src/$(PLAT)/%.c
 	@echo compiling $<
 	@$(LCC) $(CFLAGS) -c -o $@ $<
 
+$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB)
 ifneq ($(OS),Windows_NT)
 # SDAR utility has problems with the windows version
-$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB) 
 	@echo creating zgb.lib    
-	@rm -f $(OBJDIR_ZGB)/zgb.lib
+	@rm -f $@
 	@for file in $(OBJS_ZGB) ; do \
 		$(SDAR) -ru $@ $${file} ; \
 	done
 else
 # fall back to the old style library which is just the object file list
-$(OBJDIR_ZGB)/zgb.lib: $(OBJDIR_ZGB) $(OBJS_ZGB) 
 	@echo creating zgb.lib    
-	@rm -f $(OBJDIR_ZGB)/zgb.lib
+	@rm -f $@
 	@if [ -n "$(OBJECTS_ZGB)" ] ; then \
 		cp $(OBJECTS_ZGB) $(OBJDIR_ZGB)/ ; \
 	fi
-	@echo -e "$(subst $(subst ,, ),\n,$(notdir $(OBJS_ZGB)))" >> $@
+	@for o in $(notdir $(OBJS_ZGB)); do echo $$o >> $@; done
 endif
 
 
@@ -439,15 +441,20 @@ $(OBJDIR)/savegame.o: savegame.c
 	@echo compiling savegame on SRAM bank 0
 	@$(LCC) $(CFLAGS) -Wf-ba0 -c -o $@ $<
 
-$(BINDIR)/$(PROJECT_NAME).$(EXT): $(OBJDIR) $(OBJDIR_ZGB)/zgb.lib $(OBJDIR_RES) $(OBJDIR_RES)/sprites $(BINDIR) $(OBJS)
-	@echo Linking
-	@$(LCC) $(BINFLAGS) -Wl-k$(OBJDIR_ZGB)/ -Wl-lzgb.lib -o $(OBJDIR)/rom.$(EXT) $(OBJS)
+$(OBJDIR)/list.lk: $(OBJDIR) $(OBJS)
+	@echo creating linkfile
+	@rm -f $@
+	@for o in $(OBJS); do echo $$o >> $@; done
+
+$(BINDIR)/$(PROJECT_NAME).$(EXT): $(OBJDIR) $(OBJDIR_ZGB)/zgb.lib $(OBJDIR_RES) $(OBJDIR_RES)/sprites $(BINDIR) $(OBJDIR)/list.lk
+	@echo linking
+	@$(LCC) $(BINFLAGS) -Wl-k$(OBJDIR_ZGB)/ -Wl-lzgb.lib -Wl-f$(OBJDIR)/list.lk -o $(OBJDIR)/rom.$(EXT)
 	@cp $(OBJDIR)/rom.$(EXT) $(BINDIR)/$(PROJECT_NAME).$(EXT)
 	@cp $(OBJDIR)/rom.sym $(BINDIR)/$(PROJECT_NAME).sym
 	@if test -f "$(OBJDIR)/rom.cdb" ; then \
 		cp $(OBJDIR)/rom.cdb $(BINDIR)/$(PROJECT_NAME).cdb ; \
 	fi
-	@echo Done!
+	@echo done!
 
 build_lib: $(OBJDIR) $(OBJS)
 
@@ -460,14 +467,14 @@ build_lib: $(OBJDIR) $(OBJS)
 # 	@touch $@
 
 clean:
-	@echo Cleaning $(PROJECT_NAME)
+	@echo cleaning $(PROJECT_NAME)
 	@for target in $(TARGETS); do \
 		$(MAKE) $$target-clean; \
 	done
 
 run: all
 	@if test -f $(BINDIR)/$(PROJECT_NAME).$(EXT); then \
-		echo Running $(BINDIR)/$(PROJECT_NAME).$(EXT); \
+		echo running $(BINDIR)/$(PROJECT_NAME).$(EXT); \
 		$(EMULATOR) $(BINDIR)/$(PROJECT_NAME).$(EXT); \
 	fi
 
