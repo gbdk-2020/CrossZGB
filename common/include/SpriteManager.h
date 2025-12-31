@@ -23,6 +23,9 @@ extern UINT8 enable_flickering;
 extern UINT8 THIS_IDX;
 extern Sprite* THIS;
 
+extern Sprite* lock_target;
+extern Sprite* active_lock_target;
+
 void SpriteManagerReset(void);
 
 void SpriteManagerLoad(UINT8 sprite_type);

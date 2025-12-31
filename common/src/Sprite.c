@@ -78,21 +78,23 @@ void DrawSprite(void) {
 	screen_x = THIS->x - scroll_x;
 	screen_y = THIS->y - scroll_y;
 
-	// tick sprite animation
-	if (THIS->anim_data) {	
-		THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
-		if (THIS->anim_accum_ticks > 100u) {
-			THIS->anim_accum_ticks -= 100u;
+	// tick sprite animation unless a lock target exists
+	if ((active_lock_target == NULL) || (active_lock_target == THIS)) {
+		if (THIS->anim_data) {	
+			THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
+			if (THIS->anim_accum_ticks > 100u) {
+				THIS->anim_accum_ticks -= 100u;
 
-			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
-				THIS->anim_frame = 0;
+				if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
+					THIS->anim_frame = 0;
+				}
+	 
+				UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); // Do this before changing banks, anim_data is stored on current bank
+				UINT8 __save = CURRENT_BANK;
+				SWITCH_ROM(THIS->mt_sprite_bank);
+					THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
+				SWITCH_ROM(__save);
 			}
- 
-			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); // Do this before changing banks, anim_data is stored on current bank
-			UINT8 __save = CURRENT_BANK;
-			SWITCH_ROM(THIS->mt_sprite_bank);
-				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
-			SWITCH_ROM(__save);
 		}
 	}
 

@@ -37,9 +37,12 @@ INT16 last_sprite_loaded = 0;
 UINT8 last_sprite_pal_loaded = 0;
 
 Sprite* prev_scroll_target;
+Sprite* lock_target;
+Sprite* active_lock_target;
 
 void SpriteManagerReset(void) {
 	prev_scroll_target = NULL;
+	active_lock_target = NULL;
 
 #if defined(NINTENDO)
 	last_sprite_loaded = LAST_SPRITE_IDX;
@@ -265,18 +268,23 @@ void SpriteManagerUpdate(void) {
 		}
 		prev_scroll_target = scroll_target;
 	}
+	// update active lock target before sprite logic starts
+	active_lock_target = lock_target;
 	// if flickering enabled cycle the updateables array so sprites are drawn roundrobin, except the scroll target
 	if (enable_flickering) {
 		VectorRotateFrom(sprite_manager_updatables, (scroll_target) ? 1 : 0);
 	}
 	// iterate updatables, call the update function of the each sprite and render it
 	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
-		// if marked for removal then skip it
-		if (THIS->marked_for_removal) continue;
-		// switch rom bank of the sprite
-		SWITCH_ROM(spriteBanks[THIS->type]);
-		// call the sprite update function
-		spriteUpdateFuncs[THIS->type]();
+		// if the lock target is null then call sprite logic for all sprites, otherwise call sprite logic for only the lock target
+		if ((active_lock_target == NULL) || (active_lock_target == THIS)) {
+			// if marked for removal then skip it
+			if (THIS->marked_for_removal) continue;
+			// switch rom bank of the sprite
+			SWITCH_ROM(spriteBanks[THIS->type]);
+			// call the sprite update function
+			spriteUpdateFuncs[THIS->type]();
+		}
 		// if sprite is a scroll target then update the scroll position
 		if (THIS == scroll_target) {
 			RefreshScroll();
