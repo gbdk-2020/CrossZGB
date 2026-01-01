@@ -74,6 +74,9 @@ typedef struct {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
+// Animation loop terminator
+#define ANIM_STOP 255
+
 void SetFrame(Sprite* sprite, UINT8 frame);
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
