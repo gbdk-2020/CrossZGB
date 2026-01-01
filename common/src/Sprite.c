@@ -84,8 +84,10 @@ void DrawSprite(void) {
 		if (THIS->anim_accum_ticks > 100u) {
 			THIS->anim_accum_ticks -= 100u;
 			if ((VECTOR_GET(THIS->anim_data, THIS->anim_frame + 1) == ANIM_STOP) || (THIS->anim_frame == ANIM_STOP)) {
+				// if next or current frame is ANIM_STOP, set anim_frame to ANIM_STOP
 				THIS->anim_frame = ANIM_STOP;
 			} else {
+				// otherwise, run standard loop/frame logic
 				if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
 					THIS->anim_frame = 0;
 				}
@@ -93,9 +95,10 @@ void DrawSprite(void) {
  
 			UINT8 tmp = 0; // Do this before changing banks, anim_data is stored on current bank
 			if (THIS->anim_frame == ANIM_STOP) {
-				// if ANIM_STOP is used, then load the frame before ANIM_STOP
+				// if anim_frame is ANIM_STOP, then load the frame before ANIM_STOP
 				tmp = VECTOR_GET(THIS->anim_data, VECTOR_LEN(THIS->anim_data) - 2);
 			} else {
+				// otherwise, run standard frame logic
 				tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame);
 			}
 			UINT8 __save = CURRENT_BANK;
