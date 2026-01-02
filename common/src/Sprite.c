@@ -53,6 +53,7 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	SetVisible(sprite, TRUE);
 	SetPersistent(sprite, FALSE);
+	SetAnimationLoop(sprite, TRUE);
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
@@ -71,30 +72,6 @@ void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
 	}
 }
 
-inline void ProcessSpriteAnimation(void) {
-	// tick sprite animation
-	if (!THIS->anim_data) return;
-
-	THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
-	if (THIS->anim_accum_ticks >= 100u) {
-		THIS->anim_accum_ticks -= 100u;
-
-		if (VECTOR_GET(THIS->anim_data, THIS->anim_frame) == ANIM_STOP) return;
-
-		if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
-			THIS->anim_frame = 0;
-		}
-
-		UINT8 tmp;
-		if ((tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame)) == ANIM_STOP) return;
-
-		UINT8 __save = CURRENT_BANK;
-		SWITCH_ROM(THIS->mt_sprite_bank);
-			THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
-		SWITCH_ROM(__save);
-	}
-}
-
 extern UINT8 delta_time;
 extern UINT8 next_oam_idx;
 void DrawSprite(void) {
@@ -102,8 +79,29 @@ void DrawSprite(void) {
 	screen_x = THIS->x - scroll_x;
 	screen_y = THIS->y - scroll_y;
 
-	ProcessSpriteAnimation();
+	// tick sprite animation
+	if (THIS->anim_data) {
+		THIS->anim_accum_ticks += (THIS->anim_speed << delta_time);
+		if (THIS->anim_accum_ticks >= 100u) {
+			THIS->anim_accum_ticks -= 100u;
 
+			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
+				if (THIS->loop_anim) {
+					THIS->anim_frame = 0;
+				} else {
+					--THIS->anim_frame;
+				}
+			}
+
+			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame);
+			UINT8 __save = CURRENT_BANK;
+			SWITCH_ROM(THIS->mt_sprite_bank);
+				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
+			SWITCH_ROM(__save);
+		}
+	}
+
+	// render sprite on screen or remove it
 	if (
 		(THIS->visible) &&
 		(
