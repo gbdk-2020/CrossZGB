@@ -41,7 +41,15 @@ extern UINT8 current_state;
 void SetState(UINT8 state);
 
 extern UINT8 delta_time;
-extern UINT8 fade_enabled;
+
+typedef enum {
+	FADE_OFF        = 0,
+	FADE_ON         = 1,
+	FADE_DEFAULT    = 1,
+	FADE_MANUAL     = 2
+} FadeMode;
+
+extern FadeMode fade_mode;
 
 #if defined(NINTENDO)
 void LCD_isr(void) NONBANKED;

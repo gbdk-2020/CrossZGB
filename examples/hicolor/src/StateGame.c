@@ -11,7 +11,7 @@ void START(void) {
 	// uninstall the standard LCD routine (used for the overlay window)
 	LCD_uninstall();
 	// disable fading between the state transitions
-	fade_enabled = FALSE;
+	fade_mode = FADE_OFF;
 	// initialize the internal scroll position variables
 	scroll_y = scroll_x = 0;
 	// start display
@@ -33,5 +33,5 @@ void DESTROY(void) {
 	// reinstall the standard LCD routine
 	LCD_install();
 	// endble fading back
-	fade_enabled = TRUE;
+	fade_mode = FADE_DEFAULT;
 }

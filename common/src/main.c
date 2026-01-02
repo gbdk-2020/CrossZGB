@@ -10,6 +10,7 @@
 #include "Fade.h"
 #include "Palette.h"
 #include "Keys.h"
+#include "Vector.h"
 
 #ifdef USE_SAVEGAME
 	#include "savegame.h"
@@ -27,7 +28,7 @@ UINT8 _is_SGB = FALSE;
 UINT8 delta_time;
 UINT8 current_state;
 UINT8 state_running = FALSE;
-UINT8 fade_enabled = TRUE;
+FadeMode fade_mode = FADE_DEFAULT;
 
 void SetState(UINT8 state) {
 	state_running = FALSE;
@@ -91,50 +92,61 @@ void main(void) {
 
 	DISPLAY_OFF;
 	while(TRUE) {
+#if defined(NINTENDO)
+		if (fade_mode != FADE_MANUAL) {
+			BGP_REG = OBP0_REG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
+			OBP1_REG = DMG_PALETTE(DMG_WHITE, DMG_WHITE, DMG_DARK_GRAY, DMG_BLACK);
+		}
+#endif
 		if (stop_music_on_new_state) 
 			StopMusic;
 
-		SpriteManagerReset();
+		SpriteManagerReset();				// reset sprite manager and remove all sprites
+		scroll_target = NULL;				// reset scroll target
 
 		state_running = TRUE;
-		current_state = next_state;
-		scroll_target = NULL;
-		last_tile_loaded = 0;
+		current_state = next_state;			// switch to the next scene
+
+		last_tile_loaded = 0;				// reset tile allocator
 #if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
-		last_bg_pal_loaded = 0;
+		last_bg_pal_loaded = 0;				// reset palette allocator for CGB/SMS/GG
 #endif
-
-#if defined(NINTENDO)
-		BGP_REG = OBP0_REG = DMG_PALETTE(DMG_WHITE, DMG_LITE_GRAY, DMG_DARK_GRAY, DMG_BLACK);
-		OBP1_REG = DMG_PALETTE(DMG_WHITE, DMG_WHITE, DMG_DARK_GRAY, DMG_BLACK);
-#endif
-
 		SWITCH_ROM(stateBanks[current_state]);		// switch to the current state bank and stay
 
 		startFuncs[current_state]();			// initialize current state
+		if (VECTOR_LEN(sprite_manager_updatables)) {
+			SpriteManagerUpdate();			// render sprites on screen if START() of the state spawns any
+			vsync();				// wait until sprites are actually rendered to OAM
+		}
 
 		scroll_x_vblank = scroll_x, scroll_y_vblank = scroll_y;
 
-		if (state_running) {				// initialization function may change state immediately
-			if (fade_enabled) FadeOut(); else DISPLAY_ON;
+		if (state_running) {				// initialization function may change state in START()
+
+			switch (fade_mode) {			// show screen content
+				case FADE_ON : FadeOut(); break;
+				default: DISPLAY_ON; break;
+			}
 
 			Void_Func_Void current_update = updateFuncs[current_state];
 
 			while (state_running) {
-				if (!vbl_count)
-					vsync();
+				if (!vbl_count) vsync();	// wait VBlank if not slowdown
 
 				delta_time = (vbl_count < 2u) ? 0u : 1u;
 				vbl_count = 0;
 
-				UPDATE_KEYS();
+				UPDATE_KEYS();			// read joypad input
 
-				SpriteManagerUpdate();
+				SpriteManagerUpdate();		// render sprites on screen
 
 				current_update();		// update current state
 			}
 
-			if (fade_enabled) FadeIn(); else DISPLAY_OFF;
+			switch (fade_mode) {			// hide screen content
+				case FADE_ON : FadeIn(); break;
+				case FADE_OFF: DISPLAY_OFF; break;
+			}
 		}
 
 		destroyFuncs[current_state]();			// destroy current state
