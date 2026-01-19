@@ -101,29 +101,35 @@ void main(void) {
 		if (stop_music_on_new_state) 
 			StopMusic;
 
-		SpriteManagerReset();				// reset sprite manager and remove all sprites
-		scroll_target = NULL;				// reset scroll target
+		SpriteManagerReset();                           // reset sprite manager and remove all sprites
+		scroll_target = NULL;                           // reset scroll target
 
 		state_running = TRUE;
-		current_state = next_state;			// switch to the next scene
+		current_state = next_state;                     // switch to the next scene
 
-		last_tile_loaded = 0;				// reset tile allocator
+		last_tile_loaded = 0;                           // reset tile allocator
 #if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
-		last_bg_pal_loaded = 0;				// reset palette allocator for CGB/SMS/GG
+		last_bg_pal_loaded = 0;                         // reset palette allocator for CGB/SMS/GG
 #endif
-		SWITCH_ROM(stateBanks[current_state]);		// switch to the current state bank and stay
+		scroll_x_vblank = scroll_offset_x = 0;          // reset the scroll position;
+		scroll_y_vblank = scroll_offset_y = 0;
 
-		startFuncs[current_state]();			// initialize current state
-		if (VECTOR_LEN(sprite_manager_updatables)) {
-			SpriteManagerUpdate();			// render sprites on screen if START() of the state spawns any
-			vsync();				// wait until sprites are actually rendered to OAM
-		}
+		HIDE_HUD;                                       // force hiding HUD
+
+		SWITCH_ROM(stateBanks[current_state]);          // switch to the current state bank and stay
+
+		startFuncs[current_state]();                    // initialize current state
 
 		scroll_x_vblank = scroll_x, scroll_y_vblank = scroll_y;
 
-		if (state_running) {				// initialization function may change state in START()
+		if (VECTOR_LEN(sprite_manager_updatables)) {
+			SpriteManagerUpdate();                  // render sprites on screen if START() of the state spawns any
+			vsync();                                // wait until sprites are actually rendered to OAM
+		}
 
-			switch (fade_mode) {			// show screen content
+		if (state_running) {                            // initialization function may change state in START()
+
+			switch (fade_mode) {                    // show screen content
 				case FADE_ON : FadeOut(); break;
 				default: DISPLAY_ON; break;
 			}
@@ -131,25 +137,25 @@ void main(void) {
 			Void_Func_Void current_update = updateFuncs[current_state];
 
 			while (state_running) {
-				if (!vbl_count) vsync();	// wait VBlank if not slowdown
+				if (!vbl_count) vsync();        // wait VBlank if not slowdown
 
 				delta_time = (vbl_count < 2u) ? 0u : 1u;
 				vbl_count = 0;
 
-				UPDATE_KEYS();			// read joypad input
+				UPDATE_KEYS();                  // read joypad input
 
-				SpriteManagerUpdate();		// render sprites on screen
+				SpriteManagerUpdate();          // render sprites on screen
 
-				current_update();		// update current state
+				current_update();               // update current state
 			}
 
-			switch (fade_mode) {			// hide screen content
+			switch (fade_mode) {                    // hide screen content
 				case FADE_ON : FadeIn(); break;
 				case FADE_OFF: DISPLAY_OFF; break;
 			}
 		}
 
-		destroyFuncs[current_state]();			// destroy current state
+		destroyFuncs[current_state]();                  // destroy current state
 	}
 }
 
