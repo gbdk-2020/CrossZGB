@@ -50,6 +50,7 @@ typedef struct {
 	// Sprite flags
 	UINT8 visible         : 1;      // sprite visibility
 	UINT8 persistent      : 1;      // don't destroy sprite when offscreen
+	UINT8 loop_anim       : 1;      // loop animation
 
 	// Collision handling
 	UINT8 coll_group;               // collision group
@@ -94,6 +95,9 @@ inline void SetVisible(Sprite* sprite, UINT8 visible) {
 }
 inline void SetPersistent(Sprite* sprite, UINT8 persistent) {
 	sprite->persistent = (persistent);
+}
+inline void SetAnimationLoop(Sprite* sprite, UINT8 loop_anim) {
+	sprite->loop_anim = (loop_anim);
 }
 
 void DrawSprite(void);

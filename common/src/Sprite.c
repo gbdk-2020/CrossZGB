@@ -53,6 +53,7 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	SetVisible(sprite, TRUE);
 	SetPersistent(sprite, FALSE);
+	SetAnimationLoop(sprite, TRUE);
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
@@ -79,16 +80,20 @@ void DrawSprite(void) {
 	screen_y = THIS->y - scroll_y;
 
 	// tick sprite animation
-	if (THIS->anim_data) {	
-		THIS->anim_accum_ticks += THIS->anim_speed << delta_time;
-		if (THIS->anim_accum_ticks > 100u) {
+	if (THIS->anim_data) {
+		THIS->anim_accum_ticks += (THIS->anim_speed << delta_time);
+		if (THIS->anim_accum_ticks >= 100u) {
 			THIS->anim_accum_ticks -= 100u;
 
 			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
-				THIS->anim_frame = 0;
+				if (THIS->loop_anim) {
+					THIS->anim_frame = 0;
+				} else {
+					--THIS->anim_frame;
+				}
 			}
- 
-			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame); // Do this before changing banks, anim_data is stored on current bank
+
+			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame);
 			UINT8 __save = CURRENT_BANK;
 			SWITCH_ROM(THIS->mt_sprite_bank);
 				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
@@ -96,6 +101,7 @@ void DrawSprite(void) {
 		}
 	}
 
+	// render sprite on screen or remove it
 	if (
 		(THIS->visible) &&
 		(
