@@ -17,6 +17,9 @@ endif
 ifndef CUSTOM_DATA_SIZE
 	CUSTOM_DATA_SIZE = 8
 endif
+ifndef MAXIMUM_SPRITES_SIZE
+	MAXIMUM_SPRITES_SIZE = 32
+endif
 
 # Configure platform specific link and binary making flags here:
 BINFLAGS_gb      = 
@@ -105,7 +108,7 @@ FLAGSFXHAMMER_gg = -m psg
 FLAGSFXHAMMER_sms = -m psg
 FLAGSFXHAMMER += $(FLAGSFXHAMMER_$(EXT))
 
-CFLAGS += $(TARGET) -Wf-MMD $(BUILD_DEFS) -I../include -I$(ZGB_PATH_UNIX)/include -I$(OBJDIR_RES) -DFILE_NAME=$(basename $(<F)) -DCUSTOM_DATA_SIZE=$(CUSTOM_DATA_SIZE) $(CFLAGS_$(EXT))
+CFLAGS += $(TARGET) -Wf-MMD $(BUILD_DEFS) -I../include -I$(ZGB_PATH_UNIX)/include -I$(OBJDIR_RES) -DFILE_NAME=$(basename $(<F)) -DCUSTOM_DATA_SIZE=$(CUSTOM_DATA_SIZE) -DMAXIMUM_SPRITES_SIZE=$(MAXIMUM_SPRITES_SIZE) $(CFLAGS_$(EXT))
 
 # Tune Mapper and SGB settings
 ifneq ($(strip $(PLAT)),duck)
