@@ -16,14 +16,7 @@
 	#define MAXIMUM_SPRITES_SIZE 32
 #endif
 
-void SetFrame(Sprite* sprite, UINT8 frame)
-{
-	UINT8 __save = CURRENT_BANK;
-	SWITCH_ROM(sprite->mt_sprite_bank);
-		sprite->mt_sprite = sprite->mt_sprite_info->metasprites[frame];
-	SWITCH_ROM(__save);
-	sprite->anim_frame = frame; //anim_frame contains the animation frame if anim_data is assigned or the metasprite index otherwise
-}
+metasprite_t * DefAnimHandler(Sprite * sprite, UINT8 anim_idx);
 
 void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 	const struct MetaSpriteInfo* mt_sprite_info = spriteDatas[sprite_type];
@@ -41,11 +34,12 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 #else
 	sprite->attr_add = 0;
 #endif
-	sprite->anim_data = NULL;
-	
-	SetFrame(sprite, 0);
 
+	sprite->anim_data = NULL;	
 	sprite->anim_speed = 33u;
+	sprite->anim_handler = DefAnimHandler;
+
+	SetFrame(sprite, 0);
 
 	sprite->ctx = NULL;
 
@@ -96,12 +90,7 @@ void DrawSprite(void) {
 					--THIS->anim_frame;
 				}
 			}
-
-			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame);
-			UINT8 __save = CURRENT_BANK;
-			SWITCH_ROM(THIS->mt_sprite_bank);
-				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
-			SWITCH_ROM(__save);
+			THIS->mt_sprite = THIS->anim_handler(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
 		}
 	}
 

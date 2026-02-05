@@ -4,30 +4,14 @@
 
 #include "SpriteManager.h"
 #include "Keys.h"
+#include "Vector.h"
 #include "ZGBMain.h"
 
 #include "dizzy_anim.h"
 
-// Animation state enum
-typedef enum {
-	ANIM_IDLE = 0,
-	ANIM_JUMP_LEFT,
-	ANIM_JUMP_RIGHT,
-	ANIM_JUMP,
-	ANIM_WALK_LEFT,
-	ANIM_WALK_RIGHT,
-	N_ANIMS
-} animations_e;
-
 // define the animation speed conatsnt
-#define ANIMATION_SPEED      6
-#define ANIMATION_JUMP_SPEED 4
-#define ANIMATION_FRAMES     8
-
-// define the previous and the new animation state variables
-static animations_e old_anim, anim; 
-static UINT8 anim_frame, anim_tick;
-static UINT8 animation_speed;
+#define ANIMATION_SPEED      16
+#define ANIMATION_JUMP_SPEED 25
 
 // define physics values
 #define MAX_Y_VELOCITY 32
@@ -39,66 +23,73 @@ static INT16 x, y;
 static INT16 yv, xv;
 static bool jump;
 
+static const UINT8 anim_idle[]       = VECTOR( 0,  1 , 2,  3,  4,  5 , 6 , 7);
+static const UINT8 anim_jump_left[]  = VECTOR( 8,  9, 10, 11, 12, 13, 14, 15);
+static const UINT8 anim_jump_right[] = VECTOR(16, 17, 18, 19, 20, 21, 22, 23);
+static const UINT8 anim_jump[]       = VECTOR(24, 25, 26, 27, 28, 29, 30, 31);
+static const UINT8 anim_walk_left[]  = VECTOR(32, 33, 34, 35, 36, 37, 38, 39);
+static const UINT8 anim_walk_right[] = VECTOR(40, 41, 42, 43, 44, 45, 46, 47);
+
 // movement limits for the sprite
 #define LEFT_BOUND 0
 #define RIGHT_BOUND ((SCREEN_WIDTH - (dizzy_anim_HEIGHT << 3)) << 4)
 #define FLOOR_LEVEL ((SCREEN_HEIGHT - (dizzy_anim_HEIGHT << 3) - 8) << 4)
 
-// banked data loading helper function declarations
-const UINT8 * get_banked_pointer(UINT8 bank, const UINT8 * const * data);
-void set_sprite_native_banked_data(UINT8 bank, UINT8 id, UINT8 len, const UINT8 * data);
+// define the animation handler for the Dizzy sprite
+extern const metasprite_t dizzy_metasprite[];
+static UINT8 __save;
+struct metasprite_t * DizzyAnimHandler(Sprite * sprite, UINT8 anim_idx) NONBANKED {
+	sprite;
+	__save = CURRENT_BANK;
+	SWITCH_ROM(BANK(dizzy_anim));
+	// load tile data for the 9 8x8 Dizzy hardware sprites
+	set_sprite_native_data(spriteIdxs[SpriteDizzy], 9, *(dizzy_anim + anim_idx));
+	SWITCH_ROM(__save);
+	// return address of the metasprite (it is the same for the each animation frame, because we animate tiledata) 
+	return dizzy_metasprite;
+}
 
 void START(void) {
 	// initialize x and y subpixel coordinates
 	x = THIS->x << 4; y = THIS->y << 4;
+	// set animation handler
+	THIS->anim_handler = DizzyAnimHandler;
 	// initialize the animation state
-	old_anim = anim = ANIM_IDLE;
-	// animation frame and animation tick is zero
-	anim_frame = anim_tick = 0;
+	SetSpriteAnim(THIS, anim_idle, ANIMATION_SPEED);
 	// not jumping
 	jump = false;
 	// set x and y velocity
 	yv = MAX_Y_VELOCITY; xv = 0;
-	// load the very first animation frame for the sprite
-	set_sprite_native_banked_data(BANK(dizzy_anim), spriteIdxs[SpriteDizzy], 9, get_banked_pointer(BANK(dizzy_anim), dizzy_anim + anim_frame));
 }
 
 void UPDATE(void) {
-	// save old animation state, animation state to idle (will be overwritten, if keys are pressed)
-	old_anim = anim;
 	// check D-Pad buttons and set x and y velocities, update the animation state
 	if (!jump) {
 		if (KEY_PRESSED(J_LEFT)) {
 			if (KEY_PRESSED(J_UP | J_A)) {
-				anim = ANIM_JUMP_LEFT;
-				animation_speed = ANIMATION_JUMP_SPEED;
+				SetSpriteAnim(THIS, anim_jump_left, ANIMATION_JUMP_SPEED);
 				yv = -MAX_Y_VELOCITY;
 				jump = true;
 			} else {
-				anim = ANIM_WALK_LEFT;
-				animation_speed = ANIMATION_SPEED;
+				SetSpriteAnim(THIS, anim_walk_left, ANIMATION_SPEED);
 			}
 			xv = -MAX_X_VELOCITY;
 		} else if (KEY_PRESSED(J_RIGHT)) {
 			if (KEY_PRESSED(J_UP | J_A)) {
-				anim = ANIM_JUMP_RIGHT;
-				animation_speed = ANIMATION_JUMP_SPEED;
+				SetSpriteAnim(THIS, anim_jump_right, ANIMATION_JUMP_SPEED);
 				yv = -MAX_Y_VELOCITY;
 				xv = MAX_X_VELOCITY;
 				jump = true;
 			} else {
-				anim = ANIM_WALK_RIGHT;
-				animation_speed = ANIMATION_SPEED;
+				SetSpriteAnim(THIS, anim_walk_right, ANIMATION_SPEED);
 			}
 			xv = MAX_X_VELOCITY;
 		} else  if (KEY_PRESSED(J_UP | J_A)) {
-			anim = ANIM_JUMP;
-			animation_speed = ANIMATION_JUMP_SPEED;
+			SetSpriteAnim(THIS, anim_jump, ANIMATION_JUMP_SPEED);
 			yv = -MAX_Y_VELOCITY;
 			jump = true;
 		} else {
-			anim = ANIM_IDLE;
-			animation_speed = ANIMATION_SPEED;
+			SetSpriteAnim(THIS, anim_idle, ANIMATION_SPEED);
 			xv = 0;
 		}
 	}
@@ -116,16 +107,6 @@ void UPDATE(void) {
 
 	// update sprite X and Y position
 	THIS->x = x >> 4; THIS->y = y >> 4;
-
-	// if animation state variable changed, then set the new animation for the dizzy sprite
-	if (old_anim != anim) anim_frame = 0;
-
-	// tick anumation
-	if (++anim_tick >= animation_speed) {
-		set_sprite_native_banked_data(BANK(dizzy_anim), spriteIdxs[SpriteDizzy], 9, get_banked_pointer(BANK(dizzy_anim), dizzy_anim + (anim << 3) + anim_frame));
-		anim_tick = 0;
-		if (++anim_frame == ANIMATION_FRAMES) anim_frame = 0;
-	}
 }
 
 void DESTROY(void) {

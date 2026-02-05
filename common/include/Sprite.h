@@ -8,7 +8,11 @@
 #include "MetaSpriteInfo.h"
 #include "Flip.h"
 
-typedef struct {
+typedef struct Sprite;
+
+typedef struct metasprite_t* (*onAnimChange_t)(struct Sprite * sprite, UINT8 anim_idx);
+
+typedef struct Sprite {
 	// Position
 	UINT16 x, y;
 
@@ -34,6 +38,8 @@ typedef struct {
 	UINT8 anim_speed;
 	UINT8 anim_frame;
 	struct metasprite_t* mt_sprite;
+
+	onAnimChange_t anim_handler;    // on animation change handler
 
 	// Flags, currently used for mirroring
 	MirrorMode mirror;
@@ -75,7 +81,11 @@ typedef struct {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
-void SetFrame(Sprite* sprite, UINT8 frame);
+inline void SetFrame(Sprite* sprite, UINT8 frame) {
+	sprite->mt_sprite = sprite->anim_handler(sprite, frame);
+	sprite->anim_frame = frame;
+}
+
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
 
@@ -85,7 +95,7 @@ inline void SetSpriteCollisionGroup(Sprite* sprite, UINT8 group, UINT8 group_dow
 
 inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
 	if (sprite->anim_data) {
-		SetFrame(sprite, VECTOR_GET(sprite->anim_data, frame));
+		sprite->mt_sprite = sprite->anim_handler(sprite, VECTOR_GET(sprite->anim_data, frame));
 		sprite->anim_frame = frame;
 		sprite->anim_accum_ticks = 0;
 	}
