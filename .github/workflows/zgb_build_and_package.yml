@@ -1,4 +1,4 @@
-name: ZGB Build and Package
+name: Production ZGB Build and Package
 
 on:
   # Allows you to run this workflow manually from the Actions tab
