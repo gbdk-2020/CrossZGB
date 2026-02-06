@@ -87,7 +87,7 @@ void DrawSprite(void) {
 					--THIS->anim_frame;
 				}
 			}
-			THIS->mt_sprite = SpriteAnimationHandler(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
+			THIS->mt_sprite = GetSpriteAnimation(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
 		}
 	}
 

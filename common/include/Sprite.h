@@ -33,7 +33,7 @@ typedef struct Sprite {
 	UINT8 anim_accum_ticks;
 	UINT8 anim_speed;
 	UINT8 anim_frame;
-	metasprite_t* mt_sprite;
+	const metasprite_t* mt_sprite;
 
 	// Flags, currently used for mirroring
 	MirrorMode mirror;
@@ -75,10 +75,10 @@ typedef struct Sprite {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
-metasprite_t* SpriteAnimationHandler(Sprite * sprite, UINT16 anim_idx);
+const metasprite_t* GetSpriteAnimation(Sprite * sprite, UINT16 anim_idx);
 
 inline void SetFrame(Sprite* sprite, UINT8 frame) {
-	sprite->mt_sprite = SpriteAnimationHandler(sprite, frame);
+	sprite->mt_sprite = GetSpriteAnimation(sprite, frame);
 	sprite->anim_frame = frame;
 }
 
@@ -91,7 +91,7 @@ inline void SetSpriteCollisionGroup(Sprite* sprite, UINT8 group, UINT8 group_dow
 
 inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
 	if (sprite->anim_data) {
-		sprite->mt_sprite = SpriteAnimationHandler(sprite, VECTOR_GET(sprite->anim_data, frame));
+		sprite->mt_sprite = GetSpriteAnimation(sprite, VECTOR_GET(sprite->anim_data, frame));
 		sprite->anim_frame = frame;
 		sprite->anim_accum_ticks = 0;
 	}

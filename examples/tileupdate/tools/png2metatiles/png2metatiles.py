@@ -196,6 +196,7 @@ def main(argv=None):
                                   "#define {0:s}_META_HEIGHT {4:d}\n"
                                   "#define {0:s}_WIDTH {5:d}\n"
                                   "#define {0:s}_HEIGHT {6:d}\n\n"
+                                  "extern const metasprite_t {0:s}_metasprite0[];\n\n"
                                   "extern const uint8_t * const {0:s}_metatiles[];\n\n"
                                   "extern struct MetaSpriteInfo {0:s};\n\n"
                                   "#endif\n").format(identifier, 

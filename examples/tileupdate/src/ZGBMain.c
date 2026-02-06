@@ -15,9 +15,9 @@ UINT8 GetTileReplacement(UINT8* tile_ptr, UINT8* tile) {
 }
 
 // define the custom animation handler
-metasprite_t * SpriteAnimationHandler(Sprite* sprite, UINT16 anim_idx) {
+const metasprite_t * GetSpriteAnimation(Sprite* sprite, UINT16 anim_idx) {
 	static UINT8 __save;
-	struct metasprite_t * res;
+	const metasprite_t * res;
 
 	__save = CURRENT_BANK;
 	SWITCH_ROM(sprite->mt_sprite_bank);
@@ -26,7 +26,7 @@ metasprite_t * SpriteAnimationHandler(Sprite* sprite, UINT16 anim_idx) {
 			// load tile data for the 9 8x8 Dizzy hardware sprites
 			set_sprite_native_data(spriteIdxs[SpriteDizzy], 9, dizzy_metatiles[anim_idx]);
 			// return address of the metasprite (it is the same for the each animation frame, because we animate tiledata) 
-			res = res = sprite->mt_sprite_info->metasprites[0];
+			res = dizzy_metasprite0;
 			break;
 		default:
 			res = sprite->mt_sprite_info->metasprites[anim_idx];
