@@ -16,8 +16,6 @@
 	#define MAXIMUM_SPRITES_SIZE 32
 #endif
 
-metasprite_t * DefAnimHandler(Sprite * sprite, UINT8 anim_idx);
-
 void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 	const struct MetaSpriteInfo* mt_sprite_info = spriteDatas[sprite_type];
 
@@ -37,7 +35,6 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	sprite->anim_data = NULL;	
 	sprite->anim_speed = 33u;
-	sprite->anim_handler = DefAnimHandler;
 
 	SetFrame(sprite, 0);
 
@@ -90,7 +87,7 @@ void DrawSprite(void) {
 					--THIS->anim_frame;
 				}
 			}
-			THIS->mt_sprite = THIS->anim_handler(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
+			THIS->mt_sprite = SpriteAnimationHandler(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
 		}
 	}
 
