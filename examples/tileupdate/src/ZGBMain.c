@@ -23,8 +23,8 @@ const metasprite_t * GetSpriteAnimation(Sprite* sprite, UINT16 anim_idx) {
 	SWITCH_ROM(sprite->mt_sprite_bank);
 	switch(sprite->type) {
 		case SpriteDizzy:
-			// load tile data for the 9 8x8 Dizzy hardware sprites
-			set_sprite_native_data(spriteIdxs[SpriteDizzy], 9, dizzy_metatiles[anim_idx]);
+			// load tile data for the Dizzy hardware sprites
+			set_sprite_native_data(spriteIdxs[SpriteDizzy], dizzy_TILE_COUNT, dizzy_metatiles[anim_idx]);
 			// return address of the metasprite (it is the same for the each animation frame, because we animate tiledata) 
 			res = dizzy_metasprite0;
 			break;

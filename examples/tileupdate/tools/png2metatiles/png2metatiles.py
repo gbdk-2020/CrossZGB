@@ -195,14 +195,16 @@ def main(argv=None):
                                   "#define {0:s}_META_WIDTH {3:d}\n"
                                   "#define {0:s}_META_HEIGHT {4:d}\n"
                                   "#define {0:s}_WIDTH {5:d}\n"
-                                  "#define {0:s}_HEIGHT {6:d}\n\n"
+                                  "#define {0:s}_HEIGHT {6:d}\n"
+                                  "#define {0:s}_TILE_COUNT {7:d}\n\n"
                                   "extern const metasprite_t {0:s}_metasprite0[];\n\n"
                                   "extern const uint8_t * const {0:s}_metatiles[];\n\n"
                                   "extern struct MetaSpriteInfo {0:s};\n\n"
                                   "#endif\n").format(identifier, 
                                                      int(options.width), int(options.height), 
                                                      w // int(options.width), h // int(options.height),
-                                                     int(options.coll_w), int(options.coll_h)
+                                                     int(options.coll_w), int(options.coll_h),
+                                                     total_8x8_tiles
                                                     ), "ascii"))
 
 if __name__=='__main__':
