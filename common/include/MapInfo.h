@@ -3,7 +3,7 @@
 
 #include "TilesInfo.h"
 
-struct MapInfo {
+typedef struct MapInfo {
 	unsigned char* data;
 	unsigned int width;
 	unsigned int height;
@@ -14,6 +14,6 @@ struct MapInfo {
 
 	unsigned char extra_tiles_bank; // bank of TileInfo struct with the extra tiles
 	struct TilesInfo* extra_tiles;  // pointer to TileInfo struct with the extra tiles
-};
+} MapInfo;
 
 #endif
