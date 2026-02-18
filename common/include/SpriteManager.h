@@ -27,7 +27,10 @@ void SpriteManagerReset(void);
 
 void SpriteManagerLoad(UINT8 sprite_type);
 
-Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y);
+Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data);
+inline Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
+	return SpriteManagerAddEx(sprite_type, x, y, NULL);
+}
 void SpriteManagerRemove(UINT8 idx);
 void SpriteManagerRemoveSprite(Sprite* sprite);
 

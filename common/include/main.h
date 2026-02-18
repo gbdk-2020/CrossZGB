@@ -12,6 +12,7 @@
 #define SRAMREF_EXTERN(VARNAME) extern const void __sram_ ## VARNAME;
 
 typedef void (*Void_Func_Void)(void);
+typedef void (*Void_Func_VoidPtr)(void*);
 typedef void (*Void_Func_SpritePtr)(Sprite*);
 
 #define DECLARE_STATE(STATE_IDX)   extern UINT8 bank_##STATE_IDX; void Start_##STATE_IDX(void); void Update_##STATE_IDX(void); void Destroy_##STATE_IDX(void)
@@ -22,7 +23,7 @@ extern Void_Func_Void destroyFuncs[];
 
 #define DECLARE_SPRITE(SPRITE_IDX) extern UINT8 bank_##SPRITE_IDX; void Start_##SPRITE_IDX(void); void Update_##SPRITE_IDX(void); void Destroy_##SPRITE_IDX(void)
 extern UINT8 spriteBanks[];
-extern Void_Func_Void spriteStartFuncs[];
+extern Void_Func_VoidPtr spriteStartFuncs[];
 extern Void_Func_Void spriteUpdateFuncs[];
 extern Void_Func_Void spriteDestroyFuncs[];
 extern const struct MetaSpriteInfo* spriteDatas[];
