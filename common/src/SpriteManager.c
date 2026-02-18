@@ -169,7 +169,7 @@ void SpriteManagerLoad(UINT8 sprite_type) {
 	SWITCH_ROM(__save);
 }
 
-Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
+Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 	Sprite *sprite, *cached_sprite;
 	UINT8 sprite_idx, cached_sprite_idx;
 
@@ -200,7 +200,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteBanks[sprite->type]);
-	spriteStartFuncs[sprite->type]();
+	spriteStartFuncs[sprite->type](data);
 	SWITCH_ROM(__save);
 
 	//And now they must be restored

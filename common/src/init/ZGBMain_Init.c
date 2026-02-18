@@ -51,7 +51,7 @@ SPRITES
 UINT8 spriteBanks[SPRITES_ARRAY_LEN];
 UINT8 spriteDataBanks[SPRITES_ARRAY_LEN];
 
-Void_Func_Void spriteStartFuncs[SPRITES_ARRAY_LEN];
+Void_Func_VoidPtr spriteStartFuncs[SPRITES_ARRAY_LEN];
 Void_Func_Void spriteUpdateFuncs[SPRITES_ARRAY_LEN];
 Void_Func_Void spriteDestroyFuncs[SPRITES_ARRAY_LEN];
 
@@ -80,8 +80,8 @@ static const UINT8 __spriteDataBanks[N_SPRITE_TYPES + 1] = {
 	0
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = Start_##SPRITE_ID,
-static const Void_Func_Void const __spriteStartFuncs[N_SPRITE_TYPES + 1] = {
+#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = (Void_Func_VoidPtr)Start_##SPRITE_ID,
+static const Void_Func_VoidPtr const __spriteStartFuncs[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
@@ -111,11 +111,11 @@ static const UINT8 __spriteFlips[N_SPRITE_TYPES + 1] = {
 };
 #undef _SPRITE_
 void InitSprites(void) BANKED {
-	memcpy(spriteBanks, __spriteBanks, sizeof(spriteBanks));
-	memcpy(spriteDataBanks, __spriteDataBanks, sizeof(spriteDataBanks));
-	memcpy(spriteStartFuncs, __spriteStartFuncs, sizeof(spriteStartFuncs));
-	memcpy(spriteUpdateFuncs, __spriteUpdateFuncs, sizeof(spriteUpdateFuncs));
+	memcpy(spriteBanks,        __spriteBanks,        sizeof(spriteBanks)       );
+	memcpy(spriteDataBanks,    __spriteDataBanks,    sizeof(spriteDataBanks)   );
+	memcpy(spriteStartFuncs,   __spriteStartFuncs,   sizeof(spriteStartFuncs)  );
+	memcpy(spriteUpdateFuncs,  __spriteUpdateFuncs,  sizeof(spriteUpdateFuncs) );
 	memcpy(spriteDestroyFuncs, __spriteDestroyFuncs, sizeof(spriteDestroyFuncs));
-	memcpy(spriteDatas, __spriteDatas, sizeof(spriteDatas));
-	memcpy(spriteFlips, __spriteFlips, sizeof(spriteFlips));
+	memcpy(spriteDatas,        __spriteDatas,        sizeof(spriteDatas)       );
+	memcpy(spriteFlips,        __spriteFlips,        sizeof(spriteFlips)       );
 }
