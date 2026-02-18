@@ -66,8 +66,16 @@ void coro_runner_free(void * ctx);
 // coroutine helper macros
 #define INIT_CORO(BANK, CORO) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, THIS->custom_data))) SpriteManagerRemoveSprite(THIS)
 #define INIT_CORO_WITH_DATA(BANK, CORO, DATA) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, DATA))) SpriteManagerRemoveSprite(THIS)
+#define INIT_AND_ITER_CORO(BANK, CORO, DATA) \
+	if (THIS->ctx = coro_runner_alloc(CORO, BANK, DATA)) { \
+		if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS); \
+	} else SpriteManagerRemoveSprite(THIS)
 #define ITER_CORO if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS)
 #define FREE_CORO coro_runner_free(THIS->ctx)
+
+#define INIT_STATE_CORO(CTX, BANK, CORO) if ((CTX = coro_runner_alloc(CORO, BANK, NULL)) && (!coro_runner_process(CTX))) coro_runner_free(CTX),CTX=NULL
+#define ITER_STATE_CORO(CTX) if ((CTX) && (!coro_runner_process(CTX))) coro_runner_free((CTX)),CTX=NULL
+#define FREE_STATE_CORO(CTX) if (CTX) coro_runner_free(CTX)
 
 #define YIELD coro_yield()
 
