@@ -36,7 +36,7 @@ static void coro_call_handler(void * handler, uint16_t bank, void * data) NONBAN
 		or e
 		jr z, 1$		
 
-		ldhl sp, 2
+		ldhl sp, #2
 		ld a, (hl+)
 		ld h, (hl)
 		ld l, a
