@@ -41,6 +41,9 @@ inline bool coro_start(coro_context_t * context, coro_t coro, uint8_t coro_bank,
 
 typedef struct coro_runner_context_t {
 	struct coro_context_t coro_context;
+	void * destructor;
+	uint8_t bank;
+	void * data;
 	struct coro_runner_context_t * next;
 } coro_runner_context_t;
 
@@ -52,8 +55,14 @@ inline void CoroRunnerReset(void) {
 	coro_runner_init();
 }
 
+// start coroutine, assign destructor, return coroutine context, NULL if failed
+void * coro_runner_alloc_ex(coro_t coro, uint8_t coro_bank, void * user_data, coro_t destr);
+
+
 // start coroutine, return coroutine context, NULL if failed
-void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data);
+inline void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data) {
+	return coro_runner_alloc_ex(coro, coro_bank, user_data, NULL);
+}
 
 // process coroutine
 inline bool coro_runner_process(void * ctx) {
@@ -65,18 +74,28 @@ void coro_runner_free(void * ctx);
 
 // coroutine helper macros
 #define INIT_CORO(BANK, CORO) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, THIS->custom_data))) SpriteManagerRemoveSprite(THIS)
-#define INIT_CORO_WITH_DATA(BANK, CORO, DATA) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, DATA))) SpriteManagerRemoveSprite(THIS)
-#define INIT_AND_ITER_CORO(BANK, CORO, DATA) \
-	if (THIS->ctx = coro_runner_alloc(CORO, BANK, DATA)) { \
-		if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS); \
-	} else SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO_EX(BANK, CORO, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, THIS->custom_data, DESTRUCTOR))) SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO_WITH_DATA(BANK, CORO, DATA, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, DATA, DESTRUCTOR))) SpriteManagerRemoveSprite(THIS)
 #define ITER_CORO if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS)
 #define FREE_CORO coro_runner_free(THIS->ctx)
 
-#define INIT_STATE_CORO(CTX, BANK, CORO) if ((CTX = coro_runner_alloc(CORO, BANK, NULL)) && (!coro_runner_process(CTX))) coro_runner_free(CTX),CTX=NULL
+#define INIT_STATE_CORO(CTX, BANK, CORO, DESTRUCTOR) if ((CTX = coro_runner_alloc_ex(CORO, BANK, NULL, DESTRUCTOR)) && (!coro_runner_process(CTX))) coro_runner_free(CTX),CTX=NULL
 #define ITER_STATE_CORO(CTX) if ((CTX) && (!coro_runner_process(CTX))) coro_runner_free((CTX)),CTX=NULL
-#define FREE_STATE_CORO(CTX) if (CTX) coro_runner_free(CTX)
+#define FREE_STATE_CORO(CTX) coro_runner_free(CTX),CTX=NULL
 
 #define YIELD coro_yield()
 
-#endif                    
+// sprite definition helper macro
+#define SPRITE_COROUTINE(BANK, LOGIC, DESTRUCTOR) \
+void START(void) { INIT_CORO_WITH_DATA(BANK,LOGIC,THIS->custom_data,DESTRUCTOR); } \
+void UPDATE(void) { ITER_CORO; } \
+void DESTROY(void) { FREE_CORO; }
+
+// state definition helper macro
+#define STATE_COROUTINE(BANK, LOGIC, DESTRUCTOR) \
+static void * CONCAT(FILE_NAME,_state_context); \
+void START(void) { INIT_STATE_CORO(CONCAT(FILE_NAME,_state_context),BANK,LOGIC,DESTRUCTOR); } \
+void UPDATE(void) { ITER_STATE_CORO(CONCAT(FILE_NAME,_state_context)); } \
+void DESTROY(void) { FREE_STATE_CORO(CONCAT(FILE_NAME,_state_context)); }
+
+#endif
