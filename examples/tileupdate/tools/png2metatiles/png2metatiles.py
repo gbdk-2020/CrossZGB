@@ -41,10 +41,11 @@ def extract_metatile(pixels, x, y, dx, dy, bits, height):
          metatile.append(tile)
     return reduce(lambda x,y:x+y, metatile)
 
-def append_metatile(storage, metatile):
-    for i in range(len(storage)):
-        if storage[i] == metatile: 
-            return True, i
+def append_metatile(storage, metatile, keep_dupes = False):
+    if (keep_dupes == False):
+        for i in range(len(storage)):
+            if storage[i] == metatile: 
+                return True, i
     storage.append(metatile)
     return False, len(storage) - 1
 
@@ -63,19 +64,21 @@ def output_array(outf, name, array, width):
 
 def main(argv=None):
     parser = OptionParser("Usage: png2metatiles.py [options] INPUT_FILE_NAME.PNG")
-    parser.add_option("-o",  '--out',        dest='outfilename',                                      help='output file name')
-    parser.add_option("-i",  '--identifier', dest='identifier',                                       help='source identifier')
-    parser.add_option("-p",  '--bpp',        dest='bpp',         default="2",                         help='bits per pixel: 1, 2 or 4')
-    parser.add_option("-x",  '--width',      dest='width',       default="2",                         help='metatile width in tiles')
-    parser.add_option("-y",  '--height',     dest='height',      default="2",                         help='metatile height in tiles')
-    parser.add_option("",    '--pivot_x',    dest='pivot_x',     default="0",                         help='pivot point X offset in pixels')
-    parser.add_option("",    '--pivot_y',    dest='pivot_y',     default="0",                         help='pivot point Y offset in pixels')
-    parser.add_option("",    '--coll_w',     dest='coll_w',                                           help='collision box width in pixels')
-    parser.add_option("",    '--coll_h',     dest='coll_h',                                           help='collision box height in pixels')
-    parser.add_option("",    '--dmg_pal',    dest='dmg_pal',     default="0",                         help='DMG sprite palette number')
-    parser.add_option("-l",  '--tileheight', dest='tileheight',  default="8",                         help='tile height in pixels: 8 or 16')    
+    parser.add_option("-o",  '--out',             dest='outfilename',                                       help='output file name')
+    parser.add_option("-i",  '--identifier',      dest='identifier',                                        help='source identifier')
+    parser.add_option("-p",  '--bpp',             dest='bpp',         default="2",                          help='bits per pixel: 1, 2 or 4')
+    parser.add_option("-x",  '--width',           dest='width',       default="2",                          help='metatile width in tiles')
+    parser.add_option("-y",  '--height',          dest='height',      default="2",                          help='metatile height in tiles')
+    parser.add_option("-m",  '--map',             dest='mapmode',     default=False,  action="store_true",  help='map mode')
+    parser.add_option("-d",  '--keep_duplicates', dest='keep_dupes',  default=False,  action="store_true",  help='keep duplicates')
+    parser.add_option("",    '--pivot_x',         dest='pivot_x',     default="0",                          help='pivot point X offset in pixels')
+    parser.add_option("",    '--pivot_y',         dest='pivot_y',     default="0",                          help='pivot point Y offset in pixels')
+    parser.add_option("",    '--coll_w',          dest='coll_w',                                            help='collision box width in pixels')
+    parser.add_option("",    '--coll_h',          dest='coll_h',                                            help='collision box height in pixels')
+    parser.add_option("",    '--dmg_pal',         dest='dmg_pal',     default="0",                          help='DMG sprite palette number')
+    parser.add_option("-l",  '--tileheight',      dest='tileheight',  default="8",                          help='tile height in pixels: 8 or 16')    
 
-    parser.add_option("-b",  '--bank',       dest='bank',        default="255",                       help='BANK number (default AUTO=255)')    
+    parser.add_option("-b",  '--bank',            dest='bank',        default="255",                        help='BANK number (default AUTO=255)')    
 
     (options, args) = parser.parse_args()
 
@@ -134,7 +137,8 @@ def main(argv=None):
                                                               int(options.width), int(options.height), 
                                                               int(options.bpp), 
                                                               int(options.tileheight)
-                                                             )
+                                                             ),
+                                             options.keep_dupes
                                             )
                 indexes.append(idx)
        
@@ -153,59 +157,91 @@ def main(argv=None):
             outf.write(bytes("\nconst uint8_t * const {0:s}_metatiles[] = {{\n"
                              "\t{1:s}\n"
                              "\n}};\n\n".format(identifier, ','.join("{:s}{:d}_tiles".format(identifier, indexes[i]) for i in range(len(indexes)))), "ascii"))
-                        
-            outf.write(bytes("const metasprite_t {:s}_metasprite0[] = {{\n".format(identifier), "ascii"))
-            idx = 0
-            dx = -int(options.pivot_x)
-            dy = -int(options.pivot_y)
-            for y in range(int(options.height)):
-                for x in range(int(options.width)):
-                    outf.write(bytes("\tMETASPR_ITEM({:d}, {:d}, {:d}, (S_PAL({:d}){:s})),\n".format(dy, dx, idx, 0, "|S_PALETTE" if (int(options.dmg_pal) == 1) else ""), "ascii"))
-                    idx += 1
-                    dy = 0
-                    dx = 8
-                dx = -((int(options.width) - 1) * 8)
-                dy = int(options.tileheight)
-            outf.write(bytes("\tMETASPR_TERM\n};\n\n", "ascii"))
-            outf.write(bytes("const metasprite_t* const {0:s}_metasprites[] = {{ {0:s}_metasprite0 }};\n\n".format(identifier), "ascii"))
 
             outf.write(bytes("static const palette_color_t {0:s}_palettes[] = {{{1:s}\n}};\n\n".format(identifier, ','.join("\n\tRGB8({:d},{:d},{:d})".format(*i) for i in palette)), "ascii"))
 
-            outf.write(bytes("const struct MetaSpriteInfo {0:s} = {{\n"
-                             "\t.width        = {2:d},\n"
-                             "\t.height       = {3:d},\n"
-                             "\t.num_tiles    = {1:d},\n"
-                             "\t.data         = {0:s}0_tiles,\n"
-                             "\t.num_palettes = {4:d},\n"
-                             "\t.palettes     = {0:s}_palettes,\n"
-                             "\t.num_sprites  = 1,\n"
-                             "\t.metasprites  = {0:s}_metasprites,\n"
-                             "}};\n".format(identifier, total_8x8_tiles, int(options.coll_w), int(options.coll_h), total_palettes), "ascii" ))
+            if (options.mapmode):            
+                outf.write(bytes("static const uint8_t * {0:s}_colors[] = {{\n"
+                                 "\t{1:s}\n"
+                                 "}};\n\n".format(identifier, ','.join("0" for i in range(total_8x8_tiles * len(indexes)))), "ascii"))
+
+                outf.write(bytes("const struct TilesInfo {0:s} = {{\n"
+                                 "\t.num_frames = {1:d},\n"
+                                 "\t.data       = {0:s}0_tiles,\n"
+                                 "\t.num_pals   = {2:d},\n"
+                                 "\t.pals       = {0:s}_palettes,\n"
+                                 "\t.color_data = {0:s}_colors\n"
+                                 "}};\n".format(identifier, total_8x8_tiles * len(indexes), total_palettes), "ascii" ))
+            else:
+                outf.write(bytes("const metasprite_t {:s}_metasprite0[] = {{\n".format(identifier), "ascii"))
+                idx = 0
+                dx = -int(options.pivot_x)
+                dy = -int(options.pivot_y)
+                for y in range(int(options.height)):
+                    for x in range(int(options.width)):
+                        outf.write(bytes("\tMETASPR_ITEM({:d}, {:d}, {:d}, (S_PAL({:d}){:s})),\n".format(dy, dx, idx, 0, "|S_PALETTE" if (int(options.dmg_pal) == 1) else ""), "ascii"))
+                        idx += 1
+                        dy = 0
+                        dx = 8
+                    dx = -((int(options.width) - 1) * 8)
+                    dy = int(options.tileheight)
+                outf.write(bytes("\tMETASPR_TERM\n};\n\n", "ascii"))
+                outf.write(bytes("const metasprite_t* const {0:s}_metasprites[] = {{ {0:s}_metasprite0 }};\n\n".format(identifier), "ascii"))
+
+                outf.write(bytes("const struct MetaSpriteInfo {0:s} = {{\n"
+                                 "\t.width        = {2:d},\n"
+                                 "\t.height       = {3:d},\n"
+                                 "\t.num_tiles    = {1:d},\n"
+                                 "\t.data         = {0:s}0_tiles,\n"
+                                 "\t.num_palettes = {4:d},\n"
+                                 "\t.palettes     = {0:s}_palettes,\n"
+                                 "\t.num_sprites  = 1,\n"
+                                 "\t.metasprites  = {0:s}_metasprites,\n"
+                                 "}};\n".format(identifier, total_8x8_tiles, int(options.coll_w), int(options.coll_h), total_palettes), "ascii" ))
             
         # output C header file
         if outfilename.suffix == ".c":
             with open(str(outfilename.with_suffix('.h')), "wb") as hdrf:
-                hdrf.write(bytes(("#ifndef __{0:s}_INCLUDE__\n"
-                                  "#define __{0:s}_INCLUDE__\n\n"
-                                  "#include <stdint.h>\n"
-                                  "#include \"gbdk/platform.h\"\n\n"
-                                  "BANKREF_EXTERN({0:s})\n\n"
-                                  "#define {0:s}_TILE_WIDTH {1:d}\n"
-                                  "#define {0:s}_TILE_HEIGHT {2:d}\n"
-                                  "#define {0:s}_META_WIDTH {3:d}\n"
-                                  "#define {0:s}_META_HEIGHT {4:d}\n"
-                                  "#define {0:s}_WIDTH {5:d}\n"
-                                  "#define {0:s}_HEIGHT {6:d}\n"
-                                  "#define {0:s}_TILE_COUNT {7:d}\n\n"
-                                  "extern const metasprite_t {0:s}_metasprite0[];\n\n"
-                                  "extern const uint8_t * const {0:s}_metatiles[];\n\n"
-                                  "extern struct MetaSpriteInfo {0:s};\n\n"
-                                  "#endif\n").format(identifier, 
-                                                     int(options.width), int(options.height), 
-                                                     w // int(options.width), h // int(options.height),
-                                                     int(options.coll_w), int(options.coll_h),
-                                                     total_8x8_tiles
-                                                    ), "ascii"))
+                if (options.mapmode):
+                    hdrf.write(bytes(("#ifndef __{0:s}_INCLUDE__\n"
+                                      "#define __{0:s}_INCLUDE__\n\n"
+                                      "#include <stdint.h>\n"
+                                      "#include \"gbdk/platform.h\"\n\n"
+                                      "BANKREF_EXTERN({0:s})\n\n"
+                                      "#define {0:s}_TILE_WIDTH {1:d}\n"
+                                      "#define {0:s}_TILE_HEIGHT {2:d}\n"
+                                      "#define {0:s}_META_WIDTH {3:d}\n"
+                                      "#define {0:s}_META_HEIGHT {4:d}\n"
+                                      "#define {0:s}_TILE_COUNT {5:d}\n\n"
+                                      "extern const uint8_t * const {0:s}_metatiles[];\n\n"
+                                      "extern const struct TilesInfo {0:s};\n\n"
+                                      "#endif\n").format(identifier, 
+                                                         int(options.width), int(options.height), 
+                                                         w // int(options.width), h // int(options.height),
+                                                         total_8x8_tiles
+                                                        ), "ascii"))
+                else:
+                    hdrf.write(bytes(("#ifndef __{0:s}_INCLUDE__\n"
+                                      "#define __{0:s}_INCLUDE__\n\n"
+                                      "#include <stdint.h>\n"
+                                      "#include \"gbdk/platform.h\"\n\n"
+                                      "BANKREF_EXTERN({0:s})\n\n"
+                                      "#define {0:s}_TILE_WIDTH {1:d}\n"
+                                      "#define {0:s}_TILE_HEIGHT {2:d}\n"
+                                      "#define {0:s}_META_WIDTH {3:d}\n"
+                                      "#define {0:s}_META_HEIGHT {4:d}\n"
+                                      "#define {0:s}_WIDTH {5:d}\n"
+                                      "#define {0:s}_HEIGHT {6:d}\n"
+                                      "#define {0:s}_TILE_COUNT {7:d}\n\n"
+                                      "extern const metasprite_t {0:s}_metasprite0[];\n\n"
+                                      "extern const uint8_t * const {0:s}_metatiles[];\n\n"
+                                      "extern struct MetaSpriteInfo {0:s};\n\n"
+                                      "#endif\n").format(identifier, 
+                                                         int(options.width), int(options.height), 
+                                                         w // int(options.width), h // int(options.height),
+                                                         int(options.coll_w), int(options.coll_h),
+                                                         total_8x8_tiles
+                                                        ), "ascii"))
 
 if __name__=='__main__':
     main()
