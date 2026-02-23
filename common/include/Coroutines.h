@@ -56,12 +56,12 @@ inline void CoroRunnerReset(void) {
 }
 
 // start coroutine, assign destructor, return coroutine context, NULL if failed
-void * coro_runner_alloc_ex(coro_t coro, uint8_t coro_bank, void * user_data, coro_t destr);
+void * coro_runner_alloc_ex(coro_t coro, uint8_t coro_bank, void * user_data, coro_t destr, uint8_t destr_bank);
 
 
 // start coroutine, return coroutine context, NULL if failed
 inline void * coro_runner_alloc(coro_t coro, uint8_t coro_bank, void * user_data) {
-	return coro_runner_alloc_ex(coro, coro_bank, user_data, NULL);
+	return coro_runner_alloc_ex(coro, coro_bank, user_data, NULL, 0);
 }
 
 // process coroutine
@@ -74,28 +74,64 @@ void coro_runner_free(void * ctx);
 
 // coroutine helper macros
 #define INIT_CORO(BANK, CORO) if (!(THIS->ctx = coro_runner_alloc(CORO, BANK, THIS->custom_data))) SpriteManagerRemoveSprite(THIS)
-#define INIT_CORO_EX(BANK, CORO, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, THIS->custom_data, DESTRUCTOR))) SpriteManagerRemoveSprite(THIS)
-#define INIT_CORO_WITH_DATA(BANK, CORO, DATA, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, DATA, DESTRUCTOR))) SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO_EX(BANK, CORO, BANK_DESTR, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, THIS->custom_data, DESTRUCTOR, BANK_DESTR))) SpriteManagerRemoveSprite(THIS)
+#define INIT_CORO_WITH_DATA(BANK, CORO, DATA, BANK_DESTR, DESTRUCTOR) if (!(THIS->ctx = coro_runner_alloc_ex(CORO, BANK, DATA, DESTRUCTOR, BANK_DESTR))) SpriteManagerRemoveSprite(THIS)
 #define ITER_CORO if (!coro_runner_process(THIS->ctx)) SpriteManagerRemoveSprite(THIS)
 #define FREE_CORO coro_runner_free(THIS->ctx)
 
-#define INIT_STATE_CORO(CTX, BANK, CORO, DESTRUCTOR) if ((CTX = coro_runner_alloc_ex(CORO, BANK, NULL, DESTRUCTOR)) && (!coro_runner_process(CTX))) coro_runner_free(CTX),CTX=NULL
+#define INIT_STATE_CORO(CTX, BANK, CORO, BANK_DESTR, DESTRUCTOR) if ((CTX = coro_runner_alloc_ex(CORO, BANK, NULL, DESTRUCTOR, BANK_DESTR)) && (!coro_runner_process(CTX))) coro_runner_free(CTX),CTX=NULL
 #define ITER_STATE_CORO(CTX) if ((CTX) && (!coro_runner_process(CTX))) coro_runner_free((CTX)),CTX=NULL
 #define FREE_STATE_CORO(CTX) coro_runner_free(CTX),CTX=NULL
 
 #define YIELD coro_yield()
 
+// empty handler
+void NONE(void * data) BANKED;
+
+#define HASH_LIT #
+#define HASH() HASH_LIT
+
+#if defined(NINTENDO)
+#define __CALL_INIT_CORO__(LOGIC, DESTR, B_LOGIC, B_DESTR, STRAP) \
+__asm \
+	ld d,HASH()B_DESTR \
+	ld e,HASH()B_LOGIC \
+	push de \
+	ld bc,HASH()DESTR \
+	ld de,HASH()LOGIC \
+        call STRAP \
+	ret \
+__endasm
+#elif defined(SEGA)
+#define __CALL_INIT_CORO__(LOGIC, DESTR, B_LOGIC, B_DESTR, STRAP) \
+__asm \
+	ld d,HASH()B_DESTR \
+	ld e,HASH()B_LOGIC \
+	push de \
+	ld de,HASH()DESTR \
+	ld hl,HASH()LOGIC \
+        call STRAP \
+	ret \
+__endasm
+#endif
+
 // sprite definition helper macro
-#define SPRITE_COROUTINE(BANK, LOGIC, DESTRUCTOR) \
-void START(void) { INIT_CORO_WITH_DATA(BANK,LOGIC,THIS->custom_data,DESTRUCTOR); } \
+#define SPRITE_COROUTINE(LOGIC, DESTRUCTOR) \
+static void __init_sprite_coro(coro_t coro, coro_t destr, uint8_t bank_coro, uint8_t bank_destr) { \
+	if (!(THIS->ctx = coro_runner_alloc_ex(coro, bank_coro, THIS->custom_data, destr, bank_destr))) SpriteManagerRemoveSprite(THIS); \
+} \
+void START(void) NAKED { __CALL_INIT_CORO__(_ ## LOGIC, _ ## DESTRUCTOR, b_ ## LOGIC, b_ ## DESTRUCTOR, ___init_sprite_coro); } \
 void UPDATE(void) { ITER_CORO; } \
 void DESTROY(void) { FREE_CORO; }
 
 // state definition helper macro
-#define STATE_COROUTINE(BANK, LOGIC, DESTRUCTOR) \
-static void * CONCAT(FILE_NAME,_state_context); \
-void START(void) { INIT_STATE_CORO(CONCAT(FILE_NAME,_state_context),BANK,LOGIC,DESTRUCTOR); } \
-void UPDATE(void) { ITER_STATE_CORO(CONCAT(FILE_NAME,_state_context)); } \
-void DESTROY(void) { FREE_STATE_CORO(CONCAT(FILE_NAME,_state_context)); }
+#define STATE_COROUTINE(LOGIC, DESTRUCTOR) \
+static void * __state_context; \
+static void __init_state_coro(coro_t coro, coro_t destr, uint8_t bank_coro, uint8_t bank_destr) { \
+	if ((__state_context = coro_runner_alloc_ex(coro, bank_coro, NULL, destr, bank_destr)) && (!coro_runner_process(__state_context))) coro_runner_free(__state_context),__state_context=NULL; \
+} \
+void START(void) NAKED { __CALL_INIT_CORO__(_ ## LOGIC, _ ## DESTRUCTOR, b_ ## LOGIC, b_ ## DESTRUCTOR, ___init_state_coro); } \
+void UPDATE(void) { ITER_STATE_CORO(__state_context); } \
+void DESTROY(void) { FREE_STATE_CORO(__state_context); }
 
 #endif

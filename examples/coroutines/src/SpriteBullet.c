@@ -19,7 +19,7 @@ extern Sprite * PLAYER;
 
 // bullet sprite logic coroutine
 // since we are calling the sprite coroutine from within the UPDATE handler only, THIS and THIS_IDX are valid
-void SpriteBulletLogic(void * custom_data) BANKED {
+void BulletLogic(void * custom_data) BANKED {
 	custom_data;
 	// initialize the Bresenham algo, use local variables to hold the sprite logic state
 	INT16 dx  =  abs(TARGET_X_COORD - THIS->x);
@@ -37,17 +37,4 @@ void SpriteBulletLogic(void * custom_data) BANKED {
 	}
 }
 
-void START(void) {
-	// allocate coroutine context
-	INIT_CORO(BANK(SpriteBullet), SpriteBulletLogic);
-}
-
-void UPDATE(void) {
-	// iterate coroutine
-	ITER_CORO;
-}
-
-void DESTROY(void) {
-	// deallocate coroutine context
-	FREE_CORO;
-}
+SPRITE_COROUTINE(BulletLogic, NONE)

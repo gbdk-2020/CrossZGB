@@ -15,13 +15,13 @@ void coro_runner_init(void) {
 	}
 }
 
-void * coro_runner_alloc_ex(coro_t coro, uint8_t coro_bank, void * user_data, coro_t destr) {
+void * coro_runner_alloc_ex(coro_t coro, uint8_t coro_bank, void * user_data, coro_t destr, uint8_t destr_bank) {
 	if (coro_free_ctx) {
 		coro_runner_context_t * tmp = coro_free_ctx;
 		coro_free_ctx = tmp->next;
 		coro_init(&tmp->coro_context, coro, coro_bank, user_data, CORO_STACK_SIZE);
 		tmp->destructor = (uint16_t *)destr;
-		tmp->bank = coro_bank;
+		tmp->bank = destr_bank;
 		tmp->data = user_data;
 		return tmp;
 	}
@@ -80,6 +80,10 @@ void coro_runner_free(void * ctx) {
 	coro_call_handler(((coro_runner_context_t *)ctx)->destructor, ((coro_runner_context_t *)ctx)->bank, ((coro_runner_context_t *)ctx)->data);
 	((coro_runner_context_t *)ctx)->next = coro_free_ctx;
 	coro_free_ctx = (coro_runner_context_t *)ctx;
+}
+
+void NONE(void * data) BANKED {
+	(void)data;
 }
 
 static void __initializer__(void) NONBANKED NAKED {
