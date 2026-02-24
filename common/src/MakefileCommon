@@ -65,10 +65,10 @@ VGM2PSG = $(ZGB_PATH_UNIX)/../tools/vgm2psg/vgm2psg
 PSGCOMP = $(ZGB_PATH_UNIX)/../tools/psgcomp/psgcomp
 BIN2OBJ = python $(ZGB_PATH_UNIX)/../tools/bin2obj/bin2obj.py
 
-ADDR_gb = -Wl-g.STACK=0xDF00 -Wl-g_mirror_OAM=0xDF00 -Wl-g_font_recode_table=0xDFA0 -Wb-reserve=1:1000
+ADDR_gb = -Wl-g.STACK=0xDF00 -Wl-g_mirror_OAM=0xDF00 -Wl-g_font_recode_table=0xDFA0 -Wb-reserve=1:04B0
 ADDR_duck = $(ADDR_gb)
 ADDR_ap = $(ADDR_gb)
-ADDR_gg = -Wl-g.STACK=0xDEA0 -Wl-g_mirror_OAM=0xDF00 -Wl-g_font_recode_table=0xDEA0 -Wb-reserve=1:1400 -Wb-banktype=1:CODE
+ADDR_gg = -Wl-g.STACK=0xDEA0 -Wl-g_mirror_OAM=0xDF00 -Wl-g_font_recode_table=0xDEA0 -Wb-reserve=1:0450 -Wb-banktype=1:CODE
 ADDR_sms = $(ADDR_gg)
 
 CFLAGS_gb = -DDEFAULT_COLOR_DEPTH=2
@@ -219,6 +219,7 @@ ifeq ($(MUSIC_PLAYER), )
 		ifneq ($(wildcard ../res/music/$(EXT)/*.mod), )
 			CFLAGS += -DMUSIC_DRIVER_GBT
 			MUSICS_MOD = $(foreach dir,../res/music/$(EXT),$(notdir $(wildcard $(dir)/*.mod)))
+			BINFLAGS += -Wb-reserve=1:668
 		else
 			ifneq ($(wildcard ../res/music/$(EXT)/*.vgm), )
 				CFLAGS += -DMUSIC_DRIVER_PSGLIB
@@ -227,6 +228,7 @@ ifeq ($(MUSIC_PLAYER), )
 				ifneq ($(wildcard ../res/music/$(EXT)/*.fur), )
 					CFLAGS += -DMUSIC_DRIVER_BANJO
 					MUSICS_FUR = $(foreach dir,../res/music/$(EXT),$(notdir $(wildcard $(dir)/*.fur)))
+					BINFLAGS += -Wb-reserve=1:0B30
 				endif
 			endif
 		endif
@@ -236,6 +238,7 @@ else
 	ifeq ($(MUSIC_PLAYER), GBT_PLAYER)
 		CFLAGS += -DMUSIC_DRIVER_GBT
 		MUSICS_MOD = $(foreach dir,../res/music,$(notdir $(wildcard $(dir)/*.mod)))
+		BINFLAGS += -Wb-reserve=1:668
 	else
 		ifeq ($(MUSIC_PLAYER), HUGETRACKER)
 			CFLAGS += -DMUSIC_DRIVER_HUGE
