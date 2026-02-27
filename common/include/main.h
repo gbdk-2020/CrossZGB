@@ -40,6 +40,7 @@ extern UINT8 _is_SGB;
 extern UINT8 current_state;
 
 void SetState(UINT8 state);
+void SyncVBlank(void);
 
 extern UINT8 delta_time;
 

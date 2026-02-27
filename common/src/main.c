@@ -124,7 +124,7 @@ void main(void) {
 
 		if (VECTOR_LEN(sprite_manager_updatables)) {
 			SpriteManagerUpdate();                  // render sprites on screen if START() of the state spawns any
-			vsync();                                // wait until sprites are actually rendered to OAM
+			SyncVBlank();                           // wait until sprites are actually rendered to OAM
 		}
 
 		if (state_running) {                            // initialization function may change state in START()
@@ -137,7 +137,7 @@ void main(void) {
 			Void_Func_Void current_update = updateFuncs[current_state];
 
 			while (state_running) {
-				if (!vbl_count) vsync();        // wait VBlank if not slowdown
+				if (!vbl_count) SyncVBlank();        // wait VBlank if not slowdown
 
 				delta_time = (vbl_count < 2u) ? 0u : 1u;
 				vbl_count = 0;
