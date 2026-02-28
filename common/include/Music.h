@@ -91,4 +91,14 @@ inline void INIT_MUSIC(void) {
 	INIT_MUSIC_DRIVER();
 }
 
+#if defined(SEGA)
+extern UINT8 compensate_music_NTSC;
+inline void music_enable_NTSC_compensation(void) {
+	compensate_music_NTSC = (get_system() == SYSTEM_60HZ);
+}
+#else 
+inline void music_enable_NTSC_compensation(void) {
+}
+#endif
+
 #endif
