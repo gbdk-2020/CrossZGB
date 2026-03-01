@@ -1,6 +1,8 @@
 #include "Music.h"
 #include "Sound.h"
 
+#pragma disable_warning 126
+
 #define FORCE_CUT_SFX
 
 #ifdef MUSIC_DRIVER_HUGE
