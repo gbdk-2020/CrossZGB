@@ -33,7 +33,7 @@ inline void __SetMusicMuteMask(UINT8 mask) {
 }
 #elif defined(MUSIC_DRIVER_PSGLIB)
 inline void __SetMusicMuteMask(UINT8 mask) {
-	PSGMuteMask = mask;
+	PSGMuteChannels(mask);
 }
 #elif defined(MUSIC_DRIVER_BANJO)
 
