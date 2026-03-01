@@ -16,3 +16,8 @@
 #define CHECK_CUSTOM_DATA_SIZE(typ) CHECK_SIZE_NOT_LARGER(typ, CUSTOM_DATA_SIZE)
 
 const void __at(255) CONCAT(__bank_,FILE_NAME);
+
+#define EMPTY_LOGIC() \
+void START(void) {} \
+void UPDATE(void) {} \
+void DESTROY(void) {}
