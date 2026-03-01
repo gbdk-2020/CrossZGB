@@ -137,7 +137,7 @@ void MUSIC_isr(void) NONBANKED {
 
 void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 	bank; loop;
-	if(music != last_music) {
+	if ((music != last_music) || (last_music_bank != bank)) {
 		last_music_bank = SFX_STOP_BANK;
 		UBYTE __save = CURRENT_BANK;
 #if defined(MUSIC_DRIVER_GBT)
