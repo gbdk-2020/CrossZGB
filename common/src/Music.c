@@ -142,6 +142,7 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 	if ((music != last_music) || (last_music_bank != bank)) {
 		last_music_bank = SFX_STOP_BANK;
 		UBYTE __save = CURRENT_BANK;
+		sfx_sound_cut();
 #if defined(MUSIC_DRIVER_GBT)
 		gbt_play(music, bank, 7);
 		gbt_loop(loop);
