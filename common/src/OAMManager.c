@@ -47,7 +47,8 @@ void ClearOAMs(void) {
 #if defined(SEGA)
         shadow_OAM[0] = mirror_OAM[0] = 0xd0;
 #else
-	hide_sprites_range(0, MAX_HARDWARE_SPRITES);
+	memset(shadow_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
+	memset(mirror_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
 #endif
 }
 
