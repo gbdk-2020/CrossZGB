@@ -37,4 +37,14 @@ void SpriteManagerRemoveSprite(Sprite* sprite);
 void SpriteManagerFlushRemove(void);
 void SpriteManagerUpdate(void);
 
+inline void SpriteManagerBringToFront(Sprite* sprite) {
+	if (!sprite) return;
+	for (UINT8 i = 0; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
+		if (sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, i)] == sprite) {
+			VectorExchange(sprite_manager_updatables, 0, i);
+			return;
+		}
+	}
+}
+
 #endif
