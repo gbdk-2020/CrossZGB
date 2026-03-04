@@ -47,11 +47,11 @@ void ClearOAMs(void) {
 #if defined(SEGA)
         shadow_OAM[0] = mirror_OAM[0] = 0xd0;
 #else
-	memset(shadow_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
-	memset(mirror_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
+	InitOAMs();
 #endif
 }
 
 void InitOAMs(void) {
-	memset(mirror_OAM, 0, sizeof(mirror_OAM));
+	memset(shadow_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
+	memset(mirror_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
 }

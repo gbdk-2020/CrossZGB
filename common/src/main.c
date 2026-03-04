@@ -137,10 +137,7 @@ void main(void) {
 			Void_Func_Void current_update = updateFuncs[current_state];
 
 			while (state_running) {
-				if (!vbl_count) SyncVBlank();        // wait VBlank if not slowdown
-
-				delta_time = (vbl_count < 2u) ? 0u : 1u;
-				vbl_count = 0;
+				delta_time = SyncVBlank();      // wait VBlank if not slowdown
 
 				UPDATE_KEYS();                  // read joypad input
 
