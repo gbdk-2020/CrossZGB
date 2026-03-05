@@ -1,2 +1,2 @@
 # Platformer example
-Platformer physics and collition example
+Platformer physics and collision example
