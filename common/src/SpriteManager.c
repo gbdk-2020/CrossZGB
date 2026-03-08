@@ -10,12 +10,6 @@
 #include "Flip.h"
 #include "Palette.h"
 
-#if defined(NINTENDO)
-	#define LAST_SPRITE_IDX 128
-#elif defined(SEGA)
-	#define LAST_SPRITE_IDX 255
-#endif
-
 #ifndef SPRITE_LIMIT_X
 	#define SPRITE_LIMIT_X 32
 #endif
@@ -33,6 +27,7 @@ VECTOR_DECLARE(sprite_manager_updatables, N_SPRITE_MANAGER_SPRITES);
 
 UINT8 sprite_manager_removal_check;
 
+INT16 sprite_tile_allocator_top = SPRITE_TILE_ALLOC_TOP;
 INT16 last_sprite_loaded = 0;
 UINT8 last_sprite_pal_loaded = 0;
 
@@ -41,11 +36,7 @@ Sprite* prev_scroll_target;
 void SpriteManagerReset(void) {
 	prev_scroll_target = NULL;
 
-#if defined(NINTENDO)
-	last_sprite_loaded = LAST_SPRITE_IDX;
-#elif defined(SEGA)
-	last_sprite_loaded = 0;
-#endif
+	last_sprite_loaded = sprite_tile_allocator_top;
 	last_sprite_pal_loaded = 0;
 
 	UINT8 __save = CURRENT_BANK;
@@ -65,26 +56,20 @@ void SpriteManagerReset(void) {
 	}
 	ClearOAMs();
 
-	memset(spriteIdxs, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsH, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsHV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxs,   (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsH,  (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsV,  (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsHV, (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);
 	sprite_manager_removal_check = FALSE;
 }
 
-void SpriteManagerLoad(UINT8 sprite_type) {
-	if (spriteIdxs[sprite_type] != LAST_SPRITE_IDX) // Already loaded
-		return;
-#if defined(NINTENDO)
-	if (last_sprite_loaded < -127) // No room for this sprite
-		return;
-#elif defined(SEGA)
-	if (last_sprite_loaded > LAST_SPRITE_IDX) // No room for this sprite
-		return;
-#endif
+UINT8 SpriteManagerLoad(UINT8 sprite_type) {
+	// check if already loaded
+	if (((INT8)spriteIdxs[sprite_type]) >= last_sprite_loaded)
+		return TRUE;
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
@@ -93,9 +78,12 @@ void SpriteManagerLoad(UINT8 sprite_type) {
 	UINT8 n_tiles = data->num_tiles;
 	UINT8 n_pals = data->num_palettes;
 
-#if defined(NINTENDO)
+	// check if no room left
+	if ((last_sprite_loaded - n_tiles) < SPRITE_TILE_ALLOC_BOTTOM) {
+		SWITCH_ROM(__save);
+		return FALSE;
+	}
 	last_sprite_loaded -= n_tiles;
-#endif
 
 #if defined(NINTENDO)
 	spriteIdxs[sprite_type] = last_sprite_loaded;
@@ -115,34 +103,33 @@ void SpriteManagerLoad(UINT8 sprite_type) {
 	spriteIdxsH[sprite_type] = last_sprite_loaded;
 	spriteIdxsV[sprite_type] = last_sprite_loaded;
 	spriteIdxsHV[sprite_type] = last_sprite_loaded;
-	if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
-		#if DEFAULT_COLOR_DEPTH == 4
-		set_sprite_native_data(last_sprite_loaded, n_tiles, data->data);
-		#else
-		set_sprite_data(last_sprite_loaded, n_tiles, data->data);
-		#endif
-	}
-	last_sprite_loaded += n_tiles;
+
+	#if DEFAULT_COLOR_DEPTH == 4
+	set_sprite_native_data(last_sprite_loaded, n_tiles, data->data);
+	#else
+	set_sprite_data(last_sprite_loaded, n_tiles, data->data);
+	#endif
+
 	if (spriteFlips[sprite_type] & FLIP_X) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
+		if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+			last_sprite_loaded -= n_tiles;
 			spriteIdxsV[sprite_type] = last_sprite_loaded;
 			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X);
 		}
-		last_sprite_loaded += n_tiles;
 	}
 	if (spriteFlips[sprite_type] & FLIP_Y) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
+		if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+			last_sprite_loaded -= n_tiles;
 			spriteIdxsH[sprite_type] = last_sprite_loaded;
 			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_Y);
 		}
-		last_sprite_loaded += n_tiles;
 	}
 	if (spriteFlips[sprite_type] & FLIP_XY) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
+		if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+			last_sprite_loaded -= n_tiles;
 			spriteIdxsHV[sprite_type] = last_sprite_loaded;
 			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X | FLIP_Y);
 		}
-		last_sprite_loaded += n_tiles;
 	}
 #endif
 
@@ -167,6 +154,8 @@ void SpriteManagerLoad(UINT8 sprite_type) {
 #endif
 
 	SWITCH_ROM(__save);
+
+	return TRUE;
 }
 
 Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
@@ -175,7 +164,7 @@ Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 
 	if (VECTOR_LEN(sprite_manager_updatables) > (N_SPRITE_MANAGER_SPRITES - 1)) return NULL;
 
-	SpriteManagerLoad(sprite_type);
+	if (!SpriteManagerLoad(sprite_type)) return NULL;
 
 	sprite_idx = StackPop(sprite_manager_sprites_pool);
 	sprite = sprite_manager_sprites[sprite_idx];

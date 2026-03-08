@@ -4,6 +4,7 @@
 #include <gbdk/platform.h>
 
 #include "Sprite.h"
+#include "SpriteManager.h"
 #include "Scroll.h"
 #include "TilesInfo.h"
 #include "gbc_hicolor.h"
@@ -96,8 +97,9 @@ inline void LCD_install(void) {
 #endif
 
 #ifdef SEGA
-#define MAP_OVERLAP_SPR __WRITE_VDP_REG(VDP_R2, R2_MAP_0x3800); __WRITE_VDP_REG(VDP_R5, R5_SAT_0x3F00)
-#define MAP_OVERLAP_BKG __WRITE_VDP_REG(VDP_R2, R2_MAP_0x1800); __WRITE_VDP_REG(VDP_R5, R5_SAT_0x1F00)
+extern INT16 sprite_tile_allocator_top;
+#define MAP_OVERLAP_SPR __WRITE_VDP_REG(VDP_R2, R2_MAP_0x3800);__WRITE_VDP_REG(VDP_R5, R5_SAT_0x3F00);sprite_tile_allocator_top=SPRITE_TILE_ALLOC_PART
+#define MAP_OVERLAP_BKG __WRITE_VDP_REG(VDP_R2, R2_MAP_0x1800);__WRITE_VDP_REG(VDP_R5, R5_SAT_0x1F00);sprite_tile_allocator_top=SPRITE_TILE_ALLOC_FULL
 #else
 #define MAP_OVERLAP_SPR
 #define MAP_OVERLAP_BKG
