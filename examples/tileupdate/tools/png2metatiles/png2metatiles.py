@@ -9,44 +9,57 @@ from functools import reduce
 def extract_tile(pixels, x, y, bits, height, pal = None):
     tile = []
 #    pal = [3, 2, 1, 0]
-    width = 8
+    palette = 0
     for dy in range(height):
         a = b = c = d = 0
-        w = 0
         for dx in range(8):
             px = pixels[(x * 8) + dx, (y * height) + dy]
             if (pal != None):
-                f, idx = (True, pal[px]) if px in range(len(pal)) else (False, 0)
+                idx = pal[px] if px in range(len(pal)) else 0
             else:
-                f, idx = (True, px) if px in range(1 << bits) else (False, 0)            
+                idx = px
             a = a << 1 | (idx >> 0) & 0x01
             b = b << 1 | (idx >> 1) & 0x01
             c = c << 1 | (idx >> 2) & 0x01
             d = d << 1 | (idx >> 3) & 0x01
-            w += 1 if f else 0
-        width = min(width, w)
-        tile.append(a); 
-        if (bits >= 2): 
+            palette = max(palette, (idx >> bits))
+        if (bits == 1): 
+            tile.append(a)
+        elif (bits == 2): 
+            tile.append(a)
             tile.append(b)
-        if (bits == 4): 
+        elif (bits == 4): 
+            tile.append(a)
+            tile.append(b)
             tile.append(c)
             tile.append(d)
-    return width, tile
+            
+    return palette, tile
 
-def extract_metatile(pixels, x, y, dx, dy, bits, height):
+def extract_metatile(pixels, x, y, dx, dy, bits, height, columns = False):
     metatile = []
-    for i in range(dy):
-      for j in range(dx):
-         width, tile = extract_tile(pixels, x + j, y + i, bits, height)
-         metatile.append(tile)
-    return reduce(lambda x,y:x+y, metatile)
+    colors = []
+    if (columns == False):
+        for i in range(dy):
+          for j in range(dx):
+             palette, tile = extract_tile(pixels, x + j, y + i, bits, height)
+             metatile.append(tile)
+             colors.append(palette)
+    else:
+        for i in range(dx):
+          for j in range(dy):
+             palette, tile = extract_tile(pixels, x + i, y + j, bits, height)
+             metatile.append(tile)
+             colors.append(palette)
+    return colors, reduce(lambda x,y:x+y, metatile)
 
-def append_metatile(storage, metatile, keep_dupes = False):
+def append_metatile(storage, pal_storage, palette, metatile, keep_dupes = False):
     if (keep_dupes == False):
         for i in range(len(storage)):
             if storage[i] == metatile: 
                 return True, i
     storage.append(metatile)
+    pal_storage.append(palette)
     return False, len(storage) - 1
 
 def output_array(outf, name, array, width):
@@ -77,6 +90,7 @@ def main(argv=None):
     parser.add_option("",    '--coll_h',          dest='coll_h',                                            help='collision box height in pixels')
     parser.add_option("",    '--dmg_pal',         dest='dmg_pal',     default="0",                          help='DMG sprite palette number')
     parser.add_option("-l",  '--tileheight',      dest='tileheight',  default="8",                          help='tile height in pixels: 8 or 16')    
+    parser.add_option("-c",  '--columns',         dest='columns',     default=False,  action="store_true",  help='columns first')
 
     parser.add_option("-b",  '--bank',            dest='bank',        default="255",                        help='BANK number (default AUTO=255)')    
 
@@ -125,19 +139,20 @@ def main(argv=None):
 
         pixels = source.load()
 
-        indexes, metatiles = [], []
+        indexes, metatiles, tile_palettes = [], [], []
           
         total_8x8_tiles = int(options.width) * int(options.height) * (1 if (int(options.tileheight) == 8) else 2)
           
         idx = 0
         for y in range(h // int(options.height)):
             for x in range(w // int(options.width)):
-                found, idx = append_metatile(metatiles, 
-                                             extract_metatile(pixels, x * int(options.width), y * int(options.height), 
-                                                              int(options.width), int(options.height), 
-                                                              int(options.bpp), 
-                                                              int(options.tileheight)
-                                                             ),
+                found, idx = append_metatile(metatiles, tile_palettes, 
+                                             *extract_metatile(pixels, x * int(options.width), y * int(options.height), 
+                                                               int(options.width), int(options.height), 
+                                                               int(options.bpp), 
+                                                               int(options.tileheight),
+                                                               options.columns
+                                                               ),
                                              options.keep_dupes
                                             )
                 indexes.append(idx)
@@ -160,10 +175,10 @@ def main(argv=None):
 
             outf.write(bytes("static const palette_color_t {0:s}_palettes[] = {{{1:s}\n}};\n\n".format(identifier, ','.join("\n\tRGB8({:d},{:d},{:d})".format(*i) for i in palette)), "ascii"))
 
-            if (options.mapmode):            
-                outf.write(bytes("static const uint8_t * {0:s}_colors[] = {{\n"
+            if (options.mapmode):                
+                outf.write(bytes("static const uint8_t {0:s}_colors[] = {{\n"
                                  "\t{1:s}\n"
-                                 "}};\n\n".format(identifier, ','.join("0" for i in range(total_8x8_tiles * len(indexes)))), "ascii"))
+                                 "}};\n\n".format(identifier, ','.join("{:d}".format(pal) for palettes in tile_palettes for pal in palettes)), "ascii"))
 
                 outf.write(bytes("const struct TilesInfo {0:s} = {{\n"
                                  "\t.num_frames = {1:d},\n"
