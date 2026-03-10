@@ -78,6 +78,9 @@ void set_vram_word(uint8_t * addr, uint16_t v) PRESERVES_REGS(iyh, iyl);
 //This one updates the background with a tile from the hud
 #define UPDATE_BKG_TILE(X, Y, TILE) UpdateMapTile(TARGET_BKG, X, Y, hud_map_offset, TILE, 0)
 
+#define ENABLE_SCROLL_CLAMPING (clamp_enabled=TRUE)
+#define DISABLE_SCROLL_CLAMPING (clamp_enabled=FALSE)
+
 extern unsigned char* scroll_map;
 extern INT16 scroll_x;
 extern INT16 scroll_y;

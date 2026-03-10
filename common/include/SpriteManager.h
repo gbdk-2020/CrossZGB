@@ -21,8 +21,8 @@
 
 #define SPRITEMANAGER_ITERATE(i, spr) for(i = 0u, spr = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, 0)]; i != VECTOR_LEN(sprite_manager_updatables); spr = sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, ++i)])
 
-#define DISABLE_FLICKERING (enable_flickering=FALSE)
-#define ENABLE_FLICKERING (enable_flickering=TRUE)
+#define ENABLE_SPRITE_FLICKERING (enable_flickering=TRUE)
+#define DISABLE_SPRITE_FLICKERING (enable_flickering=FALSE)
 
 //Pool
 extern Sprite* sprite_manager_sprites[];
