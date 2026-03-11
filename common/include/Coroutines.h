@@ -99,7 +99,7 @@ __asm \
 	push de \
 	ld bc,HASH()DESTR \
 	ld de,HASH()LOGIC \
-        call STRAP \
+	call STRAP \
 	ret \
 __endasm
 #elif defined(SEGA)
@@ -110,7 +110,7 @@ __asm \
 	push de \
 	ld de,HASH()DESTR \
 	ld hl,HASH()LOGIC \
-        call STRAP \
+	call STRAP \
 	ret \
 __endasm
 #endif
