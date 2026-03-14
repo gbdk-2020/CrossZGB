@@ -83,6 +83,14 @@ void __SetMusicMuteMask(UINT8 mask) NONBANKED {
 
 void MUSIC_isr(void) NONBANKED {
 	static UINT8 old_mute_mask = ~MUTE_MASK_NONE;
+
+#if defined(SEGA)
+	if ((compensate_music_NTSC) && (++music_compensation > 5)) {
+		music_compensation = 0; 
+		return;
+	}
+#endif
+
 	if (old_mute_mask != music_mute_mask) {
 		__SetMusicMuteMask(music_mute_mask); 
 		old_mute_mask = music_mute_mask;
@@ -105,13 +113,6 @@ void MUSIC_isr(void) NONBANKED {
 		return;
 	if (last_music_bank == SFX_STOP_BANK)
 		return;
-
-#if defined(SEGA)
-	if ((compensate_music_NTSC) && (++music_compensation > 5)) {
-		music_compensation = 0; 
-		return;
-	}
-#endif
 
 #if defined(MUSIC_DRIVER_HUGE)
 	UBYTE __save = CURRENT_BANK;
