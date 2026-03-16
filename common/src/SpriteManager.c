@@ -10,12 +10,6 @@
 #include "Flip.h"
 #include "Palette.h"
 
-#if defined(NINTENDO)
-	#define LAST_SPRITE_IDX 128
-#elif defined(SEGA)
-	#define LAST_SPRITE_IDX 255
-#endif
-
 #ifndef SPRITE_LIMIT_X
 	#define SPRITE_LIMIT_X 32
 #endif
@@ -33,19 +27,16 @@ VECTOR_DECLARE(sprite_manager_updatables, N_SPRITE_MANAGER_SPRITES);
 
 UINT8 sprite_manager_removal_check;
 
-INT16 last_sprite_loaded = 0;
-UINT8 last_sprite_pal_loaded = 0;
+INT16 sprite_tile_allocator_top = SPRITE_TILE_ALLOC_TOP;
+INT16 last_sprite_loaded;
+UINT8 last_sprite_pal_loaded;
 
 Sprite* prev_scroll_target;
 
 void SpriteManagerReset(void) {
 	prev_scroll_target = NULL;
 
-#if defined(NINTENDO)
-	last_sprite_loaded = LAST_SPRITE_IDX;
-#elif defined(SEGA)
-	last_sprite_loaded = 0;
-#endif
+	last_sprite_loaded = sprite_tile_allocator_top;
 	last_sprite_pal_loaded = 0;
 
 	UINT8 __save = CURRENT_BANK;
@@ -65,117 +56,123 @@ void SpriteManagerReset(void) {
 	}
 	ClearOAMs();
 
-	memset(spriteIdxs, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsH, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
-	memset(spriteIdxsHV, LAST_SPRITE_IDX, SPRITES_ARRAY_LEN);
+	memset(spriteIdxs,   (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsH,  (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsV,  (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
+	memset(spriteIdxsHV, (UINT8)SPRITE_TILE_ALLOC_BOTTOM, SPRITES_ARRAY_LEN);
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);
 	sprite_manager_removal_check = FALSE;
 }
 
-void SpriteManagerLoad(UINT8 sprite_type) {
-	if (spriteIdxs[sprite_type] != LAST_SPRITE_IDX) // Already loaded
-		return;
 #if defined(NINTENDO)
-	if (last_sprite_loaded < -127) // No room for this sprite
-		return;
-#elif defined(SEGA)
-	if (last_sprite_loaded > LAST_SPRITE_IDX) // No room for this sprite
-		return;
+void set_sprite_native_data_wrap(uint8_t first_tile, uint8_t nb_tiles, const uint8_t *data);
 #endif
+
+UINT8 SpriteManagerLoad(UINT8 sprite_type) {
+	// check if already loaded
+	if (((INT8)spriteIdxs[sprite_type]) >= last_sprite_loaded)
+		return TRUE;
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
 
 	const struct MetaSpriteInfo* data = spriteDatas[sprite_type];
 	UINT8 n_tiles = data->num_tiles;
-	UINT8 n_pals = data->num_palettes;
 
-#if defined(NINTENDO)
-	last_sprite_loaded -= n_tiles;
-#endif
-
-#if defined(NINTENDO)
-	spriteIdxs[sprite_type] = last_sprite_loaded;
-	spriteIdxsH[sprite_type] = last_sprite_loaded;
-	spriteIdxsV[sprite_type] = last_sprite_loaded;
-	spriteIdxsHV[sprite_type] = last_sprite_loaded;
-
-	UINT8 end = last_sprite_loaded + n_tiles;
-	if((end - 1u) >= (UINT8)last_sprite_loaded) {
-		set_sprite_native_data(last_sprite_loaded, n_tiles, data->data);
-	} else {
-		set_sprite_native_data(last_sprite_loaded, n_tiles - end, data->data);
-		set_sprite_native_data(0, end, data->data + ((n_tiles - end) << 4));
+	// check if no room left
+	if ((last_sprite_loaded - n_tiles) < SPRITE_TILE_ALLOC_BOTTOM) {
+		SWITCH_ROM(__save);
+		return FALSE;
 	}
-#elif defined(SEGA)
+
+	// calculate the new last_sprite_loaded and set it for the current sprite
+	last_sprite_loaded -= n_tiles;
+
 	spriteIdxs[sprite_type] = last_sprite_loaded;
 	spriteIdxsH[sprite_type] = last_sprite_loaded;
 	spriteIdxsV[sprite_type] = last_sprite_loaded;
 	spriteIdxsHV[sprite_type] = last_sprite_loaded;
-	if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
+
+	if (n_tiles) {
+#if defined(NINTENDO)
+		// load tiles wrapping around 0x9000
+		set_sprite_native_data_wrap(last_sprite_loaded, n_tiles, data->data);
+#elif defined(SEGA)
+		// load normal tiles
 		#if DEFAULT_COLOR_DEPTH == 4
 		set_sprite_native_data(last_sprite_loaded, n_tiles, data->data);
 		#else
 		set_sprite_data(last_sprite_loaded, n_tiles, data->data);
 		#endif
-	}
-	last_sprite_loaded += n_tiles;
-	if (spriteFlips[sprite_type] & FLIP_X) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
-			spriteIdxsV[sprite_type] = last_sprite_loaded;
-			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X);
+		// load X-flipped tiles if required and there is enough space
+		if (spriteFlips[sprite_type] & FLIP_X) {
+			if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+				last_sprite_loaded -= n_tiles;
+				spriteIdxsV[sprite_type] = last_sprite_loaded;
+				set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X);
+			}
 		}
-		last_sprite_loaded += n_tiles;
-	}
-	if (spriteFlips[sprite_type] & FLIP_Y) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
-			spriteIdxsH[sprite_type] = last_sprite_loaded;
-			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_Y);
+		// load Y-flipped tiles if required and there is enough space
+		if (spriteFlips[sprite_type] & FLIP_Y) {
+			if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+				last_sprite_loaded -= n_tiles;
+				spriteIdxsH[sprite_type] = last_sprite_loaded;
+				set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_Y);
+			}
 		}
-		last_sprite_loaded += n_tiles;
-	}
-	if (spriteFlips[sprite_type] & FLIP_XY) {
-		if (last_sprite_loaded + n_tiles <= LAST_SPRITE_IDX) {
-			spriteIdxsHV[sprite_type] = last_sprite_loaded;
-			set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X | FLIP_Y);
+		// load XY-flipped tiles if required and there is enough space
+		if (spriteFlips[sprite_type] & FLIP_XY) {
+			if ((last_sprite_loaded - n_tiles) >= SPRITE_TILE_ALLOC_BOTTOM) {
+				last_sprite_loaded -= n_tiles;
+				spriteIdxsHV[sprite_type] = last_sprite_loaded;
+				set_sprite_data_flip(last_sprite_loaded, n_tiles, data->data, FLIP_X | FLIP_Y);
+			}
 		}
-		last_sprite_loaded += n_tiles;
-	}
 #endif
+	}
 
 #if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
+	UINT8 n_pals;
+	if (n_pals = data->num_palettes) {
 	#if defined(CGB)
-	UINT8 i;
-	for (i = 0; i != last_sprite_pal_loaded; ++i) {
-		if (memcmp(ZGB_Fading_SPal + (i * N_PALETTE_COLORS), data->palettes, n_pals * PALETTE_SIZE) == 0)
-			break;
-	}
+		// search if palette combination already exist
+		UINT8 search_index;
+		for (search_index = 0; search_index != last_sprite_pal_loaded; ++search_index) {
+			if (memcmp(ZGB_Fading_SPal + (search_index * N_PALETTE_COLORS), data->palettes, n_pals * PALETTE_SIZE) == 0)
+				break;
+		}
 
-	//Load palettes
-	spritePalsOffset[sprite_type] = i;
-	if (i == last_sprite_pal_loaded) {
+		// clamp palette offset. that produce wrong palettes in case of overflow, but not make sprite disappear on CGB
+		spritePalsOffset[sprite_type] = ((search_index > (MAX_PALETTES - n_pals)) ? (MAX_PALETTES - n_pals) : search_index);
+
+		// load palettes when it is required
+		if (search_index == last_sprite_pal_loaded) {
+			last_sprite_pal_loaded += SetPalette(SPRITES_PALETTE, last_sprite_pal_loaded, n_pals, data->palettes, CURRENT_BANK);
+		}
 	#else
-	spritePalsOffset[sprite_type] = 0;
+		spritePalsOffset[sprite_type] = 0;
+		// load sprite palette if it was not previously loaded, also there is only one sprite palette on the SMS/GG
+		if (!last_sprite_pal_loaded) {
+			last_sprite_pal_loaded += SetPalette(SPRITES_PALETTE, 0, n_pals, data->palettes, CURRENT_BANK);
+		}
 	#endif
-		last_sprite_pal_loaded += SetPalette(SPRITES_PALETTE, last_sprite_pal_loaded, n_pals, data->palettes, CURRENT_BANK);
-	#if defined(CGB)
 	}
-	#endif
 #endif
 
 	SWITCH_ROM(__save);
+
+	return TRUE;
 }
 
-Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
+Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 	Sprite *sprite, *cached_sprite;
 	UINT8 sprite_idx, cached_sprite_idx;
 
 	if (VECTOR_LEN(sprite_manager_updatables) > (N_SPRITE_MANAGER_SPRITES - 1)) return NULL;
 
-	SpriteManagerLoad(sprite_type);
+	if (!SpriteManagerLoad(sprite_type)) return NULL;
 
 	sprite_idx = StackPop(sprite_manager_sprites_pool);
 	sprite = sprite_manager_sprites[sprite_idx];
@@ -200,7 +197,7 @@ Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteBanks[sprite->type]);
-	spriteStartFuncs[sprite->type]();
+	spriteStartFuncs[sprite->type](data);
 	SWITCH_ROM(__save);
 
 	//And now they must be restored

@@ -4,7 +4,7 @@
 #include "Scroll.h"
 #include "SpriteManager.h"
 
-#include "dizzy_anim.h"
+#include "dizzy.h"
 
 IMPORT_MAP(map);
 
@@ -17,7 +17,7 @@ void START(void) {
 	// just black screen
 	InitScroll(BANK(map), &map, 0, 0);
 	// spawn the player sprite at the center of the screen
-	SpriteManagerAdd(SpriteDizzy, ((SCREEN_WIDTH - (dizzy_anim_WIDTH << 3)) / 2), (SCREEN_HEIGHT - (dizzy_anim_HEIGHT << 3) - 8));
+	SpriteManagerAdd(SpriteDizzy, ((SCREEN_WIDTH - dizzy_WIDTH) / 2), (SCREEN_HEIGHT - dizzy_HEIGHT - 8));
 }
 
 void UPDATE(void) {

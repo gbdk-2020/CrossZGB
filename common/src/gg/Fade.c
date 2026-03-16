@@ -3,6 +3,7 @@
 #include "Fade.h"
 #include "Palette.h"
 #include "Math.h"
+#include "main.h"
 
 palette_color_t ZGB_Fading_BPal[16];
 palette_color_t ZGB_Fading_SPal[16];
@@ -40,8 +41,8 @@ void FadeStepColor(UINT8 i) {
 	set_sprite_palette(0, 1, palette_s);
 
 	DISPLAY_ON;
-	vsync();
-	vsync();
+	SyncVBlank();
+	SyncVBlank();
 }
 
 void FadeIn(void) BANKED {

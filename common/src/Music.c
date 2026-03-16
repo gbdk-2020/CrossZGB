@@ -1,6 +1,8 @@
 #include "Music.h"
 #include "Sound.h"
 
+#pragma disable_warning 126
+
 #define FORCE_CUT_SFX
 
 #ifdef MUSIC_DRIVER_HUGE
@@ -16,6 +18,10 @@ UINT8 last_music_bank = SFX_STOP_BANK;
 
 UINT8 stop_music_on_new_state = 1;
 
+#if defined(SEGA)
+UINT8 compensate_music_NTSC;
+static UINT8 music_compensation;
+#endif
 
 #if defined(MUSIC_DRIVER_HUGE)
 inline void __SetMusicMuteMask(UINT8 mask) {
@@ -29,7 +35,7 @@ inline void __SetMusicMuteMask(UINT8 mask) {
 }
 #elif defined(MUSIC_DRIVER_PSGLIB)
 inline void __SetMusicMuteMask(UINT8 mask) {
-	PSGMuteMask = mask;
+	PSGMuteChannels(mask);
 }
 #elif defined(MUSIC_DRIVER_BANJO)
 
@@ -77,6 +83,14 @@ void __SetMusicMuteMask(UINT8 mask) NONBANKED {
 
 void MUSIC_isr(void) NONBANKED {
 	static UINT8 old_mute_mask = ~MUTE_MASK_NONE;
+
+#if defined(SEGA)
+	if ((compensate_music_NTSC) && (++music_compensation > 5)) {
+		music_compensation = 0; 
+		return;
+	}
+#endif
+
 	if (old_mute_mask != music_mute_mask) {
 		__SetMusicMuteMask(music_mute_mask); 
 		old_mute_mask = music_mute_mask;
@@ -126,9 +140,10 @@ void MUSIC_isr(void) NONBANKED {
 
 void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 	bank; loop;
-	if(music != last_music) {
+	if ((music != last_music) || (last_music_bank != bank)) {
 		last_music_bank = SFX_STOP_BANK;
 		UBYTE __save = CURRENT_BANK;
+		sfx_sound_cut();
 #if defined(MUSIC_DRIVER_GBT)
 		gbt_play(music, bank, 7);
 		gbt_loop(loop);

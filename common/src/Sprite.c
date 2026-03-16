@@ -7,19 +7,14 @@
 #include "MetaSpriteInfo.h"
 
 #if defined(MASTERSYSTEM)
-#define SCREEN_SPR_OFFSET_X   8
+	#define SCREEN_SPR_OFFSET_X   8
 #else
-#define SCREEN_SPR_OFFSET_X   0
+	#define SCREEN_SPR_OFFSET_X   0
 #endif
 
-void SetFrame(Sprite* sprite, UINT8 frame)
-{
-	UINT8 __save = CURRENT_BANK;
-	SWITCH_ROM(sprite->mt_sprite_bank);
-		sprite->mt_sprite = sprite->mt_sprite_info->metasprites[frame];
-	SWITCH_ROM(__save);
-	sprite->anim_frame = frame; //anim_frame contains the animation frame if anim_data is assigned or the metasprite index otherwise
-}
+#ifndef MAXIMUM_SPRITES_SIZE
+	#define MAXIMUM_SPRITES_SIZE 32
+#endif
 
 void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 	const struct MetaSpriteInfo* mt_sprite_info = spriteDatas[sprite_type];
@@ -37,11 +32,11 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 #else
 	sprite->attr_add = 0;
 #endif
-	sprite->anim_data = NULL;
-	
-	SetFrame(sprite, 0);
 
+	sprite->anim_data = NULL;	
 	sprite->anim_speed = 33u;
+
+	SetFrame(sprite, 0);
 
 	sprite->ctx = NULL;
 
@@ -92,12 +87,7 @@ void DrawSprite(void) {
 					--THIS->anim_frame;
 				}
 			}
-
-			UINT8 tmp = VECTOR_GET(THIS->anim_data, THIS->anim_frame);
-			UINT8 __save = CURRENT_BANK;
-			SWITCH_ROM(THIS->mt_sprite_bank);
-				THIS->mt_sprite = THIS->mt_sprite_info->metasprites[tmp];
-			SWITCH_ROM(__save);
+			THIS->mt_sprite = GetSpriteAnimation(THIS, VECTOR_GET(THIS->anim_data, THIS->anim_frame));
 		}
 	}
 
@@ -105,8 +95,8 @@ void DrawSprite(void) {
 	if (
 		(THIS->visible) &&
 		(
-			((UINT16)(screen_x + 32u) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + 32u)) &&
-			((UINT16)(screen_y + 32u) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + 32u))
+			((UINT16)(screen_x + MAXIMUM_SPRITES_SIZE) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + (MAXIMUM_SPRITES_SIZE << 1))) &&
+			((UINT16)(screen_y + MAXIMUM_SPRITES_SIZE) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + (MAXIMUM_SPRITES_SIZE << 1)))
 		)
 	) {
 		// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
@@ -129,8 +119,8 @@ void DrawSprite(void) {
 		if (
 			(!(THIS->persistent)) && 
 			(
-				((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + 16u))) || 
-				((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + 16u)))
+				((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + (16u << 1)))) || 
+				((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + (16u << 1))))
 			)
 		) {
 			return SpriteManagerRemoveSprite(THIS);

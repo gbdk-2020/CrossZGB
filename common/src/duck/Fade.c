@@ -3,6 +3,7 @@
 #include "Fade.h"
 #include "Palette.h"
 #include "Math.h"
+#include "main.h"
 
 inline UINT8 FadeInOp(UINT8 c, UINT8 i) {
 	return (c < i) ? 0: (c - i);
@@ -30,9 +31,9 @@ void FadeDMG(UINT8 fadeout) {
 			c = &colors[j << 2];
 			*pals[j] = DMG_PALETTE(FadeInOp(c[0], p), FadeInOp(c[1], p), FadeInOp(c[2], p), FadeInOp(c[3], p));
 		}
-		vsync();
-		vsync();
-		vsync();
+		SyncVBlank();
+		SyncVBlank();
+		SyncVBlank();
 	}
 }
 

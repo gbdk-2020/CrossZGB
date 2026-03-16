@@ -43,14 +43,15 @@ void SwapOAMs(void) {
 }
 
 void ClearOAMs(void) {
-	__render_shadow_OAM = (UINT8)((UINT16)shadow_OAM >> 8);
-	hide_sprites_range(0, MAX_HARDWARE_SPRITES);
-	_shadow_OAM_base = __render_shadow_OAM; // emulate SwapOAMs()
-	__render_shadow_OAM = (UINT8)((UINT16)mirror_OAM >> 8);
-	hide_sprites_range(0, MAX_HARDWARE_SPRITES);
 	next_oam_idx = 0;
+#if defined(SEGA)
+        shadow_OAM[0] = mirror_OAM[0] = 0xd0;
+#else
+	InitOAMs();
+#endif
 }
 
 void InitOAMs(void) {
-	memset(mirror_OAM, 0, sizeof(mirror_OAM));
+	memset(shadow_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
+	memset(mirror_OAM, 0, MAX_HARDWARE_SPRITES * OAM_ENTRY_SIZE);
 }

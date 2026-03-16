@@ -346,7 +346,7 @@ void ScrollUpdateColumn(INT16 x, INT16 y) {
 		UPDATE_TILE(x, y++);
 		scroll_ptr += scroll_tiles_w;
 		#if defined(SEGA) || (defined(NINTENDO) && defined(CGB))
-			if (scroll_ptr) scroll_ptr += scroll_tiles_w;
+			if (scroll_cptr) scroll_cptr += scroll_tiles_w;
 		#endif
 	}
 	SWITCH_ROM(__save);

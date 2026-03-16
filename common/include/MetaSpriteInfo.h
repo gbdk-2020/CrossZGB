@@ -4,7 +4,7 @@
 #include <gbdk/platform.h>
 #include <gbdk/metasprites.h>
 
-struct MetaSpriteInfo {
+typedef struct MetaSpriteInfo {
 	unsigned char width;
 	unsigned char height;
 	unsigned char num_tiles;
@@ -13,6 +13,6 @@ struct MetaSpriteInfo {
 	unsigned int* palettes;
 	unsigned char num_sprites;
 	metasprite_t** metasprites;
-};
+} MetaSpriteInfo;
 
 #endif

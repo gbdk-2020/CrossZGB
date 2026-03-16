@@ -8,7 +8,7 @@
 #include "MetaSpriteInfo.h"
 #include "Flip.h"
 
-typedef struct {
+typedef struct Sprite {
 	// Position
 	UINT16 x, y;
 
@@ -17,7 +17,7 @@ typedef struct {
 
 	// Meta sprite info
 	UINT8 mt_sprite_bank;
-	const struct MetaSpriteInfo* mt_sprite_info;
+	const MetaSpriteInfo* mt_sprite_info;
 
 	// Frame info
 	UINT8 flips;                    // supported flips/mirror modes
@@ -33,7 +33,7 @@ typedef struct {
 	UINT8 anim_accum_ticks;
 	UINT8 anim_speed;
 	UINT8 anim_frame;
-	struct metasprite_t* mt_sprite;
+	const metasprite_t* mt_sprite;
 
 	// Flags, currently used for mirroring
 	MirrorMode mirror;
@@ -75,7 +75,13 @@ typedef struct {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
-void SetFrame(Sprite* sprite, UINT8 frame);
+const metasprite_t* GetSpriteAnimation(Sprite * sprite, UINT16 anim_idx);
+
+inline void SetFrame(Sprite* sprite, UINT8 frame) {
+	sprite->mt_sprite = GetSpriteAnimation(sprite, frame);
+	sprite->anim_frame = frame;
+}
+
 void InitSprite(Sprite* sprite, UINT8 sprite_type);
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed);
 
@@ -85,7 +91,7 @@ inline void SetSpriteCollisionGroup(Sprite* sprite, UINT8 group, UINT8 group_dow
 
 inline void SetSpriteAnimFrame(Sprite* sprite, UINT8 frame) {
 	if (sprite->anim_data) {
-		SetFrame(sprite, VECTOR_GET(sprite->anim_data, frame));
+		sprite->mt_sprite = GetSpriteAnimation(sprite, VECTOR_GET(sprite->anim_data, frame));
 		sprite->anim_frame = frame;
 		sprite->anim_accum_ticks = 0;
 	}

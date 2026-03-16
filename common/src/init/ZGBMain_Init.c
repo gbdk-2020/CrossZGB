@@ -2,6 +2,8 @@
 
 #include "ZGBMain.h"
 
+#define DECLARE_STATE(PROC)   extern UINT8 bank_##PROC; void Start_##PROC(void); void Update_##PROC(void); void Destroy_##PROC(void)
+
 #define _STATE_(STATE_ID, DESTROY) DECLARE_STATE(STATE_ID); extern const void __bank_##STATE_ID;
 STATES
 #undef _STATE_
@@ -41,21 +43,24 @@ void InitStates(void) BANKED {
 	memcpy(destroyFuncs, __destroyFuncs, sizeof(destroyFuncs));
 }
 
-//-------------------------------------------------------------------------------------------------
+
 #include "MetaSpriteInfo.h"
 #include "Flip.h"
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) DECLARE_SPRITE(SPRITE_ID); extern const void __bank_##SPRITE_ID; extern const void __bank_##DATA;
+
+#define DECLARE_SPRITE(PROC) extern UINT8 bank_##PROC; void Start_##PROC(void); void Update_##PROC(void); void Destroy_##PROC(void)
+
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) DECLARE_SPRITE(PROC); extern const void __bank_##PROC; extern const void __bank_##DATA;
 SPRITES
 #undef _SPRITE_
 
 UINT8 spriteBanks[SPRITES_ARRAY_LEN];
 UINT8 spriteDataBanks[SPRITES_ARRAY_LEN];
 
-Void_Func_Void spriteStartFuncs[SPRITES_ARRAY_LEN];
+Void_Func_VoidPtr spriteStartFuncs[SPRITES_ARRAY_LEN];
 Void_Func_Void spriteUpdateFuncs[SPRITES_ARRAY_LEN];
 Void_Func_Void spriteDestroyFuncs[SPRITES_ARRAY_LEN];
 
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) extern const void __bank_##DATA; extern const struct MetaSpriteInfo DATA;
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) extern const void __bank_##DATA; extern const struct MetaSpriteInfo DATA;
 	SPRITES
 #undef _SPRITE_
 
@@ -68,54 +73,54 @@ UINT8 spriteIdxsV[SPRITES_ARRAY_LEN];
 UINT8 spriteIdxsHV[SPRITES_ARRAY_LEN];
 UINT8 spritePalsOffset[SPRITES_ARRAY_LEN];
 
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = {BANK(SPRITE_ID)},
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = {BANK(PROC)},
 static const UINT8 __spriteBanks[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	0
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = {BANK(DATA)},
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = {BANK(DATA)},
 static const UINT8 __spriteDataBanks[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	0
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = Start_##SPRITE_ID,
-static const Void_Func_Void const __spriteStartFuncs[N_SPRITE_TYPES + 1] = {
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = (Void_Func_VoidPtr)Start_##PROC,
+static const Void_Func_VoidPtr const __spriteStartFuncs[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = Update_##SPRITE_ID,
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = Update_##PROC,
 static const Void_Func_Void const __spriteUpdateFuncs[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = Destroy_##SPRITE_ID,
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = Destroy_##PROC,
 static const Void_Func_Void const __spriteDestroyFuncs[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = &DATA,
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = &DATA,
 static const struct MetaSpriteInfo* const __spriteDatas[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
 #undef _SPRITE_
-#define _SPRITE_(SPRITE_ID, DATA, FLIP) [SPRITE_ID] = FLIP,
+#define _SPRITE_(SPRITE_ID, PROC, DATA, FLIP) [SPRITE_ID] = FLIP,
 static const UINT8 __spriteFlips[N_SPRITE_TYPES + 1] = {
 	SPRITES
 	NULL
 };
 #undef _SPRITE_
 void InitSprites(void) BANKED {
-	memcpy(spriteBanks, __spriteBanks, sizeof(spriteBanks));
-	memcpy(spriteDataBanks, __spriteDataBanks, sizeof(spriteDataBanks));
-	memcpy(spriteStartFuncs, __spriteStartFuncs, sizeof(spriteStartFuncs));
-	memcpy(spriteUpdateFuncs, __spriteUpdateFuncs, sizeof(spriteUpdateFuncs));
+	memcpy(spriteBanks,        __spriteBanks,        sizeof(spriteBanks)       );
+	memcpy(spriteDataBanks,    __spriteDataBanks,    sizeof(spriteDataBanks)   );
+	memcpy(spriteStartFuncs,   __spriteStartFuncs,   sizeof(spriteStartFuncs)  );
+	memcpy(spriteUpdateFuncs,  __spriteUpdateFuncs,  sizeof(spriteUpdateFuncs) );
 	memcpy(spriteDestroyFuncs, __spriteDestroyFuncs, sizeof(spriteDestroyFuncs));
-	memcpy(spriteDatas, __spriteDatas, sizeof(spriteDatas));
-	memcpy(spriteFlips, __spriteFlips, sizeof(spriteFlips));
+	memcpy(spriteDatas,        __spriteDatas,        sizeof(spriteDatas)       );
+	memcpy(spriteFlips,        __spriteFlips,        sizeof(spriteFlips)       );
 }

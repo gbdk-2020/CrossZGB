@@ -4,6 +4,7 @@
 #include <gbdk/platform.h>
 
 #include "Sprite.h"
+#include "SpriteManager.h"
 #include "Scroll.h"
 #include "TilesInfo.h"
 #include "gbc_hicolor.h"
@@ -12,17 +13,16 @@
 #define SRAMREF_EXTERN(VARNAME) extern const void __sram_ ## VARNAME;
 
 typedef void (*Void_Func_Void)(void);
+typedef void (*Void_Func_VoidPtr)(void*);
 typedef void (*Void_Func_SpritePtr)(Sprite*);
 
-#define DECLARE_STATE(STATE_IDX)   extern UINT8 bank_##STATE_IDX; void Start_##STATE_IDX(void); void Update_##STATE_IDX(void); void Destroy_##STATE_IDX(void)
 extern UINT8 stateBanks[];
 extern Void_Func_Void startFuncs[];
 extern Void_Func_Void updateFuncs[];
 extern Void_Func_Void destroyFuncs[];
 
-#define DECLARE_SPRITE(SPRITE_IDX) extern UINT8 bank_##SPRITE_IDX; void Start_##SPRITE_IDX(void); void Update_##SPRITE_IDX(void); void Destroy_##SPRITE_IDX(void)
 extern UINT8 spriteBanks[];
-extern Void_Func_Void spriteStartFuncs[];
+extern Void_Func_VoidPtr spriteStartFuncs[];
 extern Void_Func_Void spriteUpdateFuncs[];
 extern Void_Func_Void spriteDestroyFuncs[];
 extern const struct MetaSpriteInfo* spriteDatas[];
@@ -39,6 +39,7 @@ extern UINT8 _is_SGB;
 extern UINT8 current_state;
 
 void SetState(UINT8 state);
+UINT8 SyncVBlank(void);
 
 extern UINT8 delta_time;
 
@@ -94,8 +95,9 @@ inline void LCD_install(void) {
 #endif
 
 #ifdef SEGA
-#define MAP_OVERLAP_SPR __WRITE_VDP_REG(VDP_R2, R2_MAP_0x3800); __WRITE_VDP_REG(VDP_R5, R5_SAT_0x3F00)
-#define MAP_OVERLAP_BKG __WRITE_VDP_REG(VDP_R2, R2_MAP_0x1800); __WRITE_VDP_REG(VDP_R5, R5_SAT_0x1F00)
+extern INT16 sprite_tile_allocator_top;
+#define MAP_OVERLAP_SPR __WRITE_VDP_REG(VDP_R2, R2_MAP_0x3800);__WRITE_VDP_REG(VDP_R5, R5_SAT_0x3F00);sprite_tile_allocator_top=SPRITE_TILE_ALLOC_PART
+#define MAP_OVERLAP_BKG __WRITE_VDP_REG(VDP_R2, R2_MAP_0x1800);__WRITE_VDP_REG(VDP_R5, R5_SAT_0x1F00);sprite_tile_allocator_top=SPRITE_TILE_ALLOC_FULL
 #else
 #define MAP_OVERLAP_SPR
 #define MAP_OVERLAP_BKG
