@@ -17,8 +17,8 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 #undef MUSIC_DRIVER_GBT
 #endif
 
-#define PauseMusic music_paused = 1, sfx_sound_cut_mask(~music_mute_mask)
-#define ResumeMusic if (last_music) music_paused = 0
+#define PauseMusic music_paused = TRUE, sfx_sound_cut_mask(~music_mute_mask)
+#define ResumeMusic if (last_music) music_paused = FALSE
 
 #if defined(MUSIC_DRIVER_HUGE)
 	#include "hUGEDriver.h"
@@ -96,7 +96,7 @@ extern UINT8 compensate_music_NTSC;
 inline void music_enable_NTSC_compensation(void) {
 	compensate_music_NTSC = (get_system() == SYSTEM_60HZ);
 }
-#else 
+#else
 inline void music_enable_NTSC_compensation(void) {
 }
 #endif

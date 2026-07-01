@@ -279,9 +279,18 @@ _gbt_loop::
 _gbt_stop::
 	xor	a
 	ld	(gbt_playing),a
-	ldh	(#.NR50),a
+	ldh	(#.NR12),a
+	ldh	(#.NR22),a
+	ldh	(#.NR32),a
+	ldh	(#.NR42),a
+
+	ld	a, #0b11000000 ; retrigger
+	ldh	(#.NR14),a
+	ldh	(#.NR24),a
+	ldh	(#.NR44),a
+
+	ld	a, #0xff
 	ldh	(#.NR51),a
-	ldh	(#.NR52),a
 	ret
 
 ;-------------------------------------------------------------------------------
