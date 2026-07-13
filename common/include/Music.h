@@ -26,7 +26,7 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 
 	#define INIT_MUSIC_DRIVER()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _uge; extern const hUGESong_t SONG ## _uge
-	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _uge, (uint8_t)&__bank_ ## SONG ## _uge, 0)
+	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _uge, (uint16_t)&__bank_ ## SONG ## _uge, 0)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
 
 	#define MuteMusicChannels(CHANNELS) (music_mute_mask = (CHANNELS))
@@ -35,7 +35,7 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 
 	#define INIT_MUSIC_DRIVER() gbt_stop()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _mod_Data; extern const unsigned char * SONG ## _mod_Data[]
-	#define PlayMusic(SONG, LOOP) __PlayMusic(SONG ## _mod_Data, (uint8_t)&__bank_ ## SONG ## _mod_Data, LOOP)
+	#define PlayMusic(SONG, LOOP) __PlayMusic(SONG ## _mod_Data, (uint16_t)&__bank_ ## SONG ## _mod_Data, LOOP)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
 
 	#define MuteMusicChannels(CHANNELS) (music_mute_mask = (CHANNELS))
@@ -46,7 +46,7 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 	void __StopMusic(void);
 	#define INIT_MUSIC_DRIVER()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _psg; extern const void SONG ## _psg
-	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _psg, (uint8_t)&__bank_ ## SONG ## _psg, LOOP)
+	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _psg, (uint16_t)&__bank_ ## SONG ## _psg, LOOP)
 	#define StopMusic (sfx_sound_cut(), last_music_bank = SFX_STOP_BANK, last_music = NULL)
 
 	#define MuteMusicChannels(CHANNELS) PSGMuteChannels(CHANNELS)
@@ -55,7 +55,7 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop);
 
 	#define INIT_MUSIC_DRIVER() __InitMusicDriver()
 	#define DECLARE_MUSIC(SONG) extern const void __bank_ ## SONG ## _fur; extern const song_data_t SONG ## _fur
-	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _fur, (uint8_t)&__bank_ ## SONG ## _fur, LOOP)
+	#define PlayMusic(SONG, LOOP) __PlayMusic(&SONG ## _fur, (uint16_t)&__bank_ ## SONG ## _fur, LOOP)
 	#define StopMusic __StopMusic()
 
 	#define MuteMusicChannels(CHANNELS) (music_mute_mask = (CHANNELS))
