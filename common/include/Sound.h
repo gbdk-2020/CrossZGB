@@ -18,7 +18,7 @@ extern volatile UINT8 sfx_priority;
 #define SFX_STOP_BANK 0xffu
 
 // mute mask helper macro
-#define SFX_MUTE_MASK(VARNAME) ( (UINT8) & __mute_mask_ ## VARNAME )
+#define SFX_MUTE_MASK(VARNAME) ( (UINT16) & __mute_mask_ ## VARNAME )
 
 extern volatile UINT8 sfx_play_bank;
 extern const UINT8 * sfx_play_sample;
