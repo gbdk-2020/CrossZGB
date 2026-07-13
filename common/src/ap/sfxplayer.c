@@ -2,18 +2,12 @@
 
 #include "Sound.h"
 
-#define PERIOD_8192 0x700
-#define LENGTH_8192 0xfe
-#define PERIOD_1920 0x3BB
-#define LENGTH_1920 0x3b
-
-#define CH3_LENGTH (LENGTH_1920)
-#define CH3_VALUES (PERIOD_1920 | 0xc000)
-
-
 volatile UINT8 sfx_play_bank = SFX_STOP_BANK;
 const UINT8 * sfx_play_sample = NULL;
 UINT8 sfx_frame_skip;
+
+UINT8 sfx_wav_len = SFX_WAV_LENGTH;
+UINT16 sfx_wav_freq = SFX_WAV_FREQUENCY;
 
 UINT8 sfx_play_isr(void) NONBANKED NAKED {
 #if defined(__SDCC)
@@ -93,13 +87,14 @@ lbl:
 
         ld a, #0x80
         ldh (_NR30_REG),a
-        ld a, #(CH3_LENGTH)         ; length of wave
+        ld a, (_sfx_wav_len)        ; length of wave
         ldh (_NR31_REG),a
         ld a, #0x20                 ; volume
         ldh (_NR32_REG),a
-        ld a, #<(CH3_VALUES)
+        ld a, (_sfx_wav_freq)       ; low byte frequency
         ldh (_NR33_REG),a
-        ld a, #>(CH3_VALUES)
+        ld a, (_sfx_wav_freq + 1)   ; high byte frequency + retrigger
+        or #SFX_CH_RETRIGGER
         ldh (_NR34_REG),a
 
 9$:

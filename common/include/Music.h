@@ -9,6 +9,7 @@ extern void* last_music;
 extern UINT8 last_music_bank;
 extern UINT8 stop_music_on_new_state;
 extern volatile UINT8 music_paused;
+extern volatile UINT8 music_skip_interrupts;
 
 void MUSIC_isr(void) NONBANKED;
 void __PlayMusic(void* music, UINT8 bank, UINT8 loop);

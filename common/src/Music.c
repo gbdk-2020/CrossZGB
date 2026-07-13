@@ -17,6 +17,7 @@ void* last_music = NULL;
 UINT8 last_music_bank = SFX_STOP_BANK;
 
 UINT8 stop_music_on_new_state = 1;
+volatile UINT8 music_skip_interrupts;
 
 #if defined(SEGA)
 UINT8 compensate_music_NTSC;
@@ -83,6 +84,7 @@ void __SetMusicMuteMask(UINT8 mask) NONBANKED {
 
 void MUSIC_isr(void) NONBANKED {
 	static UINT8 old_mute_mask = ~MUTE_MASK_NONE;
+	static UINT8 skip_interrupts;
 
 #if defined(SEGA)
 	if ((compensate_music_NTSC) && (++music_compensation > 5)) {
@@ -113,6 +115,11 @@ void MUSIC_isr(void) NONBANKED {
 		return;
 	if (last_music_bank == SFX_STOP_BANK)
 		return;
+
+	if (skip_interrupts) {
+		--skip_interrupts;
+		return; 
+	} else skip_interrupts = music_skip_interrupts;
 
 #if defined(MUSIC_DRIVER_HUGE)
 	UBYTE __save = CURRENT_BANK;

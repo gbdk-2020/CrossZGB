@@ -24,6 +24,17 @@ extern volatile UINT8 sfx_play_bank;
 extern const UINT8 * sfx_play_sample;
 extern UINT8 sfx_frame_skip;
 
+#define SFX_WAV_FREQUENCY_8192 0x700
+#define SFX_WAV_LENGTH_8192    0xfe
+#define SFX_WAV_FREQUENCY_1920 0x3BB
+#define SFX_WAV_LENGTH_1920    0x3b
+
+#define SFX_WAV_LENGTH SFX_WAV_LENGTH_1920
+#define SFX_WAV_FREQUENCY SFX_WAV_FREQUENCY_1920
+
+extern UINT16 sfx_wav_freq;
+extern UINT8 sfx_wav_len;
+
 #if defined(NINTENDO)
 #define SFX_CH_RETRIGGER  0b11000000
 #define SFX_CH_ENABLE     0b10000000
