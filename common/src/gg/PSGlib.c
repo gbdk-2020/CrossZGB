@@ -7,12 +7,12 @@
 
 #include "PSGlib.h"
 
-#define PSGData             #0x40
+#define PSGData             0x40
 
-#define PSGWait             #0x38
-#define PSGSubString        #0x08
-#define PSGLoop             #0x01
-#define PSGEnd              #0x00
+#define PSGWait             0x38
+#define PSGSubString        0x08
+#define PSGLoop             0x01
+#define PSGEnd              0x00
 
 uint8_t PSGStatus = PSG_STOPPED;        // playback status
 uint8_t PSGMuteMask = PSG_MUTE_NONE;    // channel mute mask
@@ -150,7 +150,7 @@ void PSGFrame (void) NAKED {
 
 ; --- no latch -----------------
 7$:
-        cp PSGData
+        cp #PSGData
         jr c, 8$                        ; if < $40 then it is a command
 
 ; --- save shadow registers -----
@@ -215,7 +215,7 @@ void PSGFrame (void) NAKED {
 
 ; --- commands -------------------
 8$:
-        cp PSGWait
+        cp #PSGWait
         jr z, 4$                        ; no additional frames
         jr c, 5$                        ; other commands?
         and #0x07                       ; take only the last 3 bits for skip frames
@@ -225,11 +225,11 @@ void PSGFrame (void) NAKED {
         ret                             ; frame done
 
 5$:
-        cp PSGSubString
+        cp #PSGSubString
         jr nc, 10$
-        cp PSGEnd
+        cp #PSGEnd
         jr z, 9$
-        cp PSGLoop
+        cp #PSGLoop
         ret nz
 
 ; --- set loop point -------------
