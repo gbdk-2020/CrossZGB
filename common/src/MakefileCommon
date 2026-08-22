@@ -108,7 +108,7 @@ FLAGSFXHAMMER_gg = -m psg
 FLAGSFXHAMMER_sms = -m psg
 FLAGSFXHAMMER += $(FLAGSFXHAMMER_$(EXT))
 
-CFLAGS += $(TARGET) -Wf-MMD $(BUILD_DEFS) -I../include -I$(ZGB_PATH_UNIX)/include -I$(OBJDIR_RES) -DFILE_NAME=$(basename $(<F)) -DCUSTOM_DATA_SIZE=$(CUSTOM_DATA_SIZE) -DMAXIMUM_SPRITES_SIZE=$(MAXIMUM_SPRITES_SIZE) $(CFLAGS_$(EXT))
+CFLAGS += $(TARGET) -Wf-MMD -Wf-Wp-MP $(BUILD_DEFS) -I../include -I$(ZGB_PATH_UNIX)/include -I$(OBJDIR_RES) -DFILE_NAME=$(basename $(<F)) -DCUSTOM_DATA_SIZE=$(CUSTOM_DATA_SIZE) -DMAXIMUM_SPRITES_SIZE=$(MAXIMUM_SPRITES_SIZE) $(CFLAGS_$(EXT))
 
 # Tune Mapper and SGB settings
 ifneq ($(strip $(PLAT)),duck)
@@ -262,7 +262,7 @@ BINS = $(BINDIR)/$(PROJECT_NAME).$(EXT) #$(OBJDIR)/Makefile.uptodate
 -include MakefileCustom
 
 # Dependencies ------------------------------------
-# option -MMD will generate .d files that can be included here for dependency checking (we can skip this on clean)
+# -MMD and -Wf-Wp-MP options will generate .d files that can be included here for dependency checking (we can skip this on clean)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(CLASSES:%.c=$(OBJDIR)/%.d) 
