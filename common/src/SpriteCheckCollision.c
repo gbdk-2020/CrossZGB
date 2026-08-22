@@ -23,8 +23,7 @@ __asm
 	ld ixh, d
 	ld ixl, e    ; ix: sprite1
 
-	xor a        ; 0 for the early return
-	ld d, a
+	ld d, #0
 
 ;if ((sprite1->x + sprite1->coll_w) < sprite2->x) return 0;
 
@@ -35,8 +34,9 @@ __asm
 
 	ld c, ___offset_Sprite__x+0(iy)
 	ld b, ___offset_Sprite__x+1(iy)
+	xor a
 	sbc hl, bc
-	jp c, 0$
+	jp c, 0$     ; return 0
 
 ;if ((sprite2->x + sprite2->coll_w) < sprite1->x) return 0;
 
@@ -47,8 +47,9 @@ __asm
 
 	ld c, ___offset_Sprite__x+0(ix)
 	ld b, ___offset_Sprite__x+1(ix)
+	xor a
 	sbc hl, bc
-	jp c, 0$
+	jp c, 0$     ; return 0
 
 ;if ((sprite1->y + sprite1->coll_h) < sprite2->y) return 0;
 
@@ -59,8 +60,9 @@ __asm
 
 	ld c, ___offset_Sprite__y+0(iy)
 	ld b, ___offset_Sprite__y+1(iy)
+	xor a
 	sbc hl, bc
-	jp c, 0$
+	jp c, 0$     ; return 0
 
 ;if ((sprite2->y + sprite2->coll_h) < sprite1->y) return 0;
 
@@ -71,10 +73,11 @@ __asm
 
 	ld c, ___offset_Sprite__y+0(ix)
 	ld b, ___offset_Sprite__y+1(ix)
+	xor a
 	sbc hl, bc
-	jp c, 0$
+	jp c, 0$     ; return 0
 
-	ld a, #1     ; return 1 
+	inc a        ; return 1 
 0$:
 	pop ix
 	ret
