@@ -75,6 +75,8 @@ typedef struct Sprite {
 #define SPRITE_SET_DEFAULT_PALETTE(SPRITE)
 #endif
 
+#define SPRITE_ANIM_MAX_TICKS 100u
+
 const metasprite_t* GetSpriteAnimation(Sprite * sprite, UINT16 anim_idx);
 
 inline void SetFrame(Sprite* sprite, UINT8 frame) {

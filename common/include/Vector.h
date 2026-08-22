@@ -59,14 +59,14 @@
 #define VectorAdd(V, ELEM) (V[++V[0]] = (ELEM))
 #define IterateVector(V, IDX, ELEM) for (IDX = 0, ELEM = V[1]; IDX != V[0]; IDX++, ELEM = V[IDX + 1u])
 void VectorRemovePos(UINT8* v, UINT8 pos);
-void BufferRotate(UINT8* v, UINT8 len);
-#define VectorRotate(v) BufferRotate(&v[1], v[0])
+void BufferRotate(UINT8* v, UINT16 len);
+#define VectorRotate(v) BufferRotate(v + 1, v[0])
 inline void VectorRotateFrom(UINT8* v, UINT8 pos) { 
-	if (pos < v[0]) BufferRotate(&v[pos + 1u], (v[0] - pos));
+	if (pos < v[0]) BufferRotate(v + pos + 1u, (v[0] - pos));
 }
 void BufferExchange(UINT8* v, UINT16 xy);
 inline void VectorExchange(UINT8* v, UINT8 pos1, UINT8 pos2) { 
-	if ((pos1 < v[0]) && (pos2 < v[0])) BufferExchange(v, (UINT16)((pos1 + 1u) << 8) | (UINT8)(pos2 + 1u));
+	if ((pos1 < v[0]) && (pos2 < v[0])) BufferExchange(v + 1, ((UINT16)(pos1 << 8) | (UINT8)pos2));
 }
 
 

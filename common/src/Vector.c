@@ -63,10 +63,11 @@ void BufferExchange(UINT8* v, UINT16 xy) NAKED {
 	__endasm;
 }
 
-void BufferRotate(UINT8* v, UINT8 len) NAKED {
+void BufferRotate(UINT8* v, UINT16 len) NAKED {
 	v; len;
 	__asm
 #if defined(__TARGET_gb) || defined(__TARGET_ap) || defined(__TARGET_duck)
+		ld a, c
 		sub #1
 		ret c
 		ret z
@@ -88,15 +89,10 @@ void BufferRotate(UINT8* v, UINT8 len) NAKED {
 				
 		ret
 #elif defined(__TARGET_sms) || defined(__TARGET_gg)
-		pop bc
-		dec sp
-		pop af
-		push bc
-
+		ld a, e
 		sub #1
 		ret c
 		ret z
-
 		ld c, a
 		ld b, #0
 
