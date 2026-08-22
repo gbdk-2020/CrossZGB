@@ -132,11 +132,3 @@ void DrawSprite(void) {
 	}
 
 }
-
-UINT8 CheckCollision(Sprite* sprite1, Sprite* sprite2) {
-	if ((sprite1->x + sprite1->coll_w) < sprite2->x) return 0;
-	if ((sprite2->x + sprite2->coll_w) < sprite1->x) return 0;
-	if ((sprite1->y + sprite1->coll_h) < sprite2->y) return 0;
-	if ((sprite2->y + sprite2->coll_h) < sprite1->y) return 0;
-	return 1;
-}
