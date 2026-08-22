@@ -52,24 +52,26 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	UINT8 __save = CURRENT_BANK;
 	SWITCH_ROM(spriteDataBanks[sprite_type]);
-		sprite->coll_w = mt_sprite_info->width;
-		sprite->coll_h = mt_sprite_info->height;
+	sprite->coll_w = mt_sprite_info->width;
+	sprite->coll_h = mt_sprite_info->height;
 	SWITCH_ROM(__save);
 }
 
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
-	if (sprite->anim_data != data) {
-		sprite->anim_data = (UINT8* )data;
-		SetFrame(sprite, VECTOR_GET(data, 0));
-		sprite->anim_frame = 0;
-		sprite->anim_accum_ticks = 0;
-		sprite->anim_speed = speed;
-	}
+	if (sprite->anim_data == data) return;
+		
+	sprite->anim_data = (UINT8* )data;
+	SetFrame(sprite, VECTOR_GET(data, 0));
+	sprite->anim_frame = 0;
+	sprite->anim_accum_ticks = 0;
+	sprite->anim_speed = speed;
 }
 
 extern UINT8 delta_time;
 extern UINT8 next_oam_idx;
+
 void DrawSprite(void) {
+	// calculate screen coordinates
 	static INT16 screen_x, screen_y;
 	screen_x = THIS->x - scroll_x;
 	screen_y = THIS->y - scroll_y;
@@ -77,8 +79,8 @@ void DrawSprite(void) {
 	// tick sprite animation
 	if (THIS->anim_data) {
 		THIS->anim_accum_ticks += (THIS->anim_speed << delta_time);
-		if (THIS->anim_accum_ticks >= 100u) {
-			THIS->anim_accum_ticks -= 100u;
+		if (THIS->anim_accum_ticks >= SPRITE_ANIM_MAX_TICKS) {
+			THIS->anim_accum_ticks -= SPRITE_ANIM_MAX_TICKS;
 
 			if (++THIS->anim_frame >= VECTOR_LEN(THIS->anim_data)) {
 				if (THIS->loop_anim) {
@@ -91,21 +93,20 @@ void DrawSprite(void) {
 		}
 	}
 
-	// render sprite on screen or remove it
-	if (
-		(THIS->visible) &&
-		(
+	// if invisible skip rendering
+	if (THIS->visible) {
+		// render sprite on screen or remove it
+		if (
 			((UINT16)(screen_x + MAXIMUM_SPRITES_SIZE) < (UINT16)(DEVICE_SCREEN_PX_WIDTH + (MAXIMUM_SPRITES_SIZE << 1))) &&
 			((UINT16)(screen_y + MAXIMUM_SPRITES_SIZE) < (UINT16)(DEVICE_SCREEN_PX_HEIGHT + (MAXIMUM_SPRITES_SIZE << 1)))
-		)
-	) {
-		// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
-		screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
-		screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
+		) {
+			// don't draw if too far off screen to avoid "ghost sprites" because of the move_metasprite_ex() coordinate overflow or not visible
+			screen_x += (DEVICE_SPRITE_PX_OFFSET_X + SCREEN_SPR_OFFSET_X);
+			screen_y += DEVICE_SPRITE_PX_OFFSET_Y;
 
-		// render sprite on screen
-		UINT8 __save = CURRENT_BANK;
-		SWITCH_ROM(THIS->mt_sprite_bank);
+			static UINT8 __save; 
+			__save = CURRENT_BANK;
+			SWITCH_ROM(THIS->mt_sprite_bank);
 			switch(THIS->mirror) {
 				case NO_MIRROR: next_oam_idx += move_metasprite_ex    (THIS->mt_sprite, THIS->first_tile,    THIS->attr_add, next_oam_idx, screen_x,                screen_y               ); break;
 				case H_MIRROR:  next_oam_idx += move_metasprite_flipy (THIS->mt_sprite, THIS->first_tile_H,  THIS->attr_add, next_oam_idx, screen_x,                screen_y + THIS->coll_h); break;
@@ -113,18 +114,21 @@ void DrawSprite(void) {
 				case (H_MIRROR | V_MIRROR):
 				case HV_MIRROR: next_oam_idx += move_metasprite_flipxy(THIS->mt_sprite, THIS->first_tile_HV, THIS->attr_add, next_oam_idx, screen_x + THIS->coll_w, screen_y + THIS->coll_h); break;
 			}
-		SWITCH_ROM(__save);
-	} else {
-		// check sprite for removal 
-		if (
-			(!(THIS->persistent)) && 
-			(
-				((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + (16u << 1)))) || 
-				((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + (16u << 1))))
-			)
-		) {
-			return SpriteManagerRemoveSprite(THIS);
+			SWITCH_ROM(__save);
+
+			// render sprite on screen
+			return;
 		}
+	}
+
+	if (THIS->persistent) return;
+	
+	// check sprite for removal 
+	if (
+		((UINT16)(screen_x + THIS->lim_x + 16u) > (UINT16)((THIS->lim_x << 1) + (DEVICE_SCREEN_PX_WIDTH + (16u << 1)))) || 
+		((UINT16)(screen_y + THIS->lim_y + 16u) > (UINT16)((THIS->lim_y << 1) + (DEVICE_SCREEN_PX_HEIGHT + (16u << 1))))
+	) {
+		SpriteManagerRemoveSprite(THIS);
 	}
 
 }

@@ -44,11 +44,27 @@ Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data);
 inline Sprite* SpriteManagerAdd(UINT8 sprite_type, UINT16 x, UINT16 y) {
 	return SpriteManagerAddEx(sprite_type, x, y, NULL);
 }
+
+extern UINT8 sprite_manager_purge;
+
 void SpriteManagerRemove(UINT8 idx);
 void SpriteManagerRemoveSprite(Sprite* sprite);
 
 void SpriteManagerFlushRemove(void);
+
 void SpriteManagerUpdate(void);
+
+void SpriteManagerRenderPurge(void);
+void SpriteManagerRenderOnly(void);
+
+inline void SpriteManagerRender(void) {
+	if (sprite_manager_purge) {
+		SpriteManagerRenderPurge(); 
+		sprite_manager_purge = FALSE;
+	} else {
+		SpriteManagerRenderOnly();
+	}
+}
 
 inline void SpriteManagerBringToFront(Sprite* sprite) {
 	if (!sprite) return;

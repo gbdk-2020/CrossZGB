@@ -25,17 +25,13 @@ DECLARE_STACK(sprite_manager_sprites_pool, N_SPRITE_MANAGER_SPRITES);
 //Current sprites
 VECTOR_DECLARE(sprite_manager_updatables, N_SPRITE_MANAGER_SPRITES);
 
-UINT8 sprite_manager_removal_check;
+UINT8 sprite_manager_purge;
 
 INT16 sprite_tile_allocator_top = SPRITE_TILE_ALLOC_TOP;
 INT16 last_sprite_loaded;
 UINT8 last_sprite_pal_loaded;
 
-Sprite* prev_scroll_target;
-
 void SpriteManagerReset(void) {
-	prev_scroll_target = NULL;
-
 	last_sprite_loaded = sprite_tile_allocator_top;
 	last_sprite_pal_loaded = 0;
 
@@ -63,7 +59,7 @@ void SpriteManagerReset(void) {
 
 	//Clear the list of updatable sprites
 	VECTOR_CLEAR(sprite_manager_updatables);
-	sprite_manager_removal_check = FALSE;
+	sprite_manager_purge = FALSE;
 }
 
 #if defined(NINTENDO)
@@ -167,8 +163,9 @@ UINT8 SpriteManagerLoad(UINT8 sprite_type) {
 }
 
 Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
-	Sprite *sprite, *cached_sprite;
-	UINT8 sprite_idx, cached_sprite_idx;
+	static Sprite *sprite, *cached_sprite;
+	static UINT8 sprite_idx, cached_sprite_idx;
+	static UINT8 __save;
 
 	if (VECTOR_LEN(sprite_manager_updatables) > (N_SPRITE_MANAGER_SPRITES - 1)) return NULL;
 
@@ -187,7 +184,7 @@ Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 	InitSprite(sprite, sprite_type);
 	sprite->x = x;
 	sprite->y = y;
-	sprite->unique_id = SPRITE_UNIQUE_ID(PX_TO_TILE(x), PX_TO_TILE(y + sprite->coll_h - 1));
+	sprite->unique_id = (UINT16)data;
 
 	//Before calling start THIS and THIS_IDX must be set, preserve the old values
 	cached_sprite = THIS;
@@ -195,7 +192,7 @@ Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 	THIS = sprite;
 	THIS_IDX = VECTOR_LEN(sprite_manager_updatables) - 1;
 
-	UINT8 __save = CURRENT_BANK;
+	__save = CURRENT_BANK;
 	SWITCH_ROM(spriteBanks[sprite->type]);
 	spriteStartFuncs[sprite->type](data);
 	SWITCH_ROM(__save);
@@ -208,66 +205,24 @@ Sprite* SpriteManagerAddEx(UINT8 sprite_type, UINT16 x, UINT16 y, void* data) {
 
 void SpriteManagerRemove(UINT8 idx) {
 	sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, idx)]->marked_for_removal = TRUE;
-	sprite_manager_removal_check = TRUE;
+	sprite_manager_purge = TRUE;
 }
 
 void SpriteManagerRemoveSprite(Sprite* sprite) {
-	sprite->marked_for_removal = TRUE;
-	sprite_manager_removal_check = TRUE;
-}
-
-void SpriteManagerFlushRemove(void) {
-	//We must remove sprites in inverse order because everytime we remove one the vector shrinks and displaces all elements
-	UINT8 __save = CURRENT_BANK;
-	// iterate updatable sprites
-	UINT8 current = 0;
-	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
-		UINT8 sprite_idx = VECTOR_GET(sprite_manager_updatables, THIS_IDX);
-		if (THIS->marked_for_removal) {
-			// switch ROM bank and call the sprite destroy handler
-			SWITCH_ROM(spriteBanks[THIS->type]);
-			spriteDestroyFuncs[THIS->type]();
-			// return sprite to sprite pool
-			StackPush(sprite_manager_sprites_pool, sprite_idx);
-		} else {
-			// add sprite to the temporary vector instead
-			VECTOR_SET_DIRECT(sprite_manager_updatables, current++, sprite_idx);
-		}
-	
-	}
-	VECTOR_LEN(sprite_manager_updatables) = current;
-	SWITCH_ROM(__save);
-	sprite_manager_removal_check = FALSE;
+	sprite->marked_for_removal = TRUE; 
+	sprite_manager_purge = TRUE;
 }
 
 UINT8 enable_flickering = TRUE;
-UINT8 THIS_IDX = 0;
+UINT8 THIS_IDX;
 Sprite* THIS = NULL;
+
 void SpriteManagerUpdate(void) {
 	static UINT8 __save;
-
-	// save the current bank
+	// preserve current bank
 	__save = CURRENT_BANK;
-	// if scroll target changed, then find it in the updateables vector and make it the first one in it
-	if (prev_scroll_target != scroll_target) {
-		// do that only if flickering enabled
-		if ((enable_flickering) && (scroll_target)) {
-			for (UINT8 i = 0; i != VECTOR_LEN(sprite_manager_updatables); ++i) {
-				if (sprite_manager_sprites[VECTOR_GET(sprite_manager_updatables, i)] == scroll_target) {
-					VectorExchange(sprite_manager_updatables, 0, i);
-					break;
-				}
-			}
-
-		}
-		prev_scroll_target = scroll_target;
-	}
-	// if flickering enabled cycle the updateables array so sprites are drawn roundrobin, except the scroll target
-	if (enable_flickering) {
-		VectorRotateFrom(sprite_manager_updatables, (scroll_target) ? 1 : 0);
-	}
 	// iterate updatables, call the update function of the each sprite and render it
-	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
+	SPRITEMANAGER_ITERATE(THIS_IDX, THIS)  {
 		// if marked for removal then skip it
 		if (THIS->marked_for_removal) continue;
 		// switch rom bank of the sprite
@@ -277,16 +232,60 @@ void SpriteManagerUpdate(void) {
 		// if sprite is a scroll target then update the scroll position
 		if (THIS == scroll_target) {
 			RefreshScroll();
+			if ((THIS_IDX) && (enable_flickering)) {
+				BufferExchange(sprite_manager_updatables + 1, THIS_IDX);
+			}
 		}
-		// render sprite into the OAM
-		DrawSprite();
 	}
 	// restore bank
 	SWITCH_ROM(__save);
-	// hide unused sprites and swap shadow OAMs
-	SwapOAMs();
-	// remove sprites pending for remove
-	if (sprite_manager_removal_check) {
-		SpriteManagerFlushRemove();
+	// if flickering enabled cycle the updateables array so sprites are drawn roundrobin, except the scroll target
+	if (enable_flickering) {
+		if (scroll_target) {
+			BufferRotate(sprite_manager_updatables + 2, VECTOR_LEN(sprite_manager_updatables) - 1);
+		} else {
+			BufferRotate(sprite_manager_updatables + 1, VECTOR_LEN(sprite_manager_updatables));
+		} 
 	}
+}
+
+void SpriteManagerRenderOnly(void) {
+	static UINT8 __save;
+	__save = CURRENT_BANK;
+	// iterate updatable sprites and render
+	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
+		// switch ROM bank and call the sprite destroy handler
+		SWITCH_ROM(spriteBanks[THIS->type]);
+		// render sprite into the OAM
+		DrawSprite();
+	}
+	SWITCH_ROM(__save);
+}
+
+void SpriteManagerRenderPurge(void) {
+	static UINT8 __save, current, sprite_idx;
+	__save = CURRENT_BANK;
+	// iterate updatable sprites and render or remove marked
+	current = 0;
+	SPRITEMANAGER_ITERATE(THIS_IDX, THIS) {
+		// switch ROM bank and call the sprite destroy handler
+		SWITCH_ROM(spriteBanks[THIS->type]);
+		// get global sprite index
+		sprite_idx = VECTOR_GET(sprite_manager_updatables, THIS_IDX);
+		// remove sprite or render to screen
+		if (THIS->marked_for_removal) {
+			spriteDestroyFuncs[THIS->type]();
+			// return sprite to sprite pool
+			StackPush(sprite_manager_sprites_pool, sprite_idx);
+		} else {
+			// render sprite into the OAM
+			DrawSprite();
+			// shrink the vector
+			VECTOR_SET_DIRECT(sprite_manager_updatables, current++, sprite_idx);
+		}
+
+	}
+	// update the updateables vector length
+	VECTOR_LEN(sprite_manager_updatables) = current;
+	SWITCH_ROM(__save);
 }

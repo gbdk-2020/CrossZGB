@@ -134,16 +134,23 @@ void main(void) {
 				default: DISPLAY_ON; break;
 			}
 
-			Void_Func_Void current_update = updateFuncs[current_state];
+			static Void_Func_Void current_update;
+
+			current_update = updateFuncs[current_state];
 
 			while (state_running) {
 				delta_time = SyncVBlank();      // wait VBlank if not slowdown
 
 				UPDATE_KEYS();                  // read joypad input
 
-				SpriteManagerUpdate();          // render sprites on screen
-
 				current_update();               // update current state
+
+				if (VECTOR_LEN(sprite_manager_updatables)) {
+					SpriteManagerUpdate();  // update sprites
+					SpriteManagerRender();  // remove deleted sprites and render sprites on screen
+				}
+				SwapOAMs();                     // swap shadow OAMs and update scroll registers
+
 			}
 
 			switch (fade_mode) {                    // hide screen content
