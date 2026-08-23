@@ -23,13 +23,12 @@ __asm
 	ld ixh, d
 	ld ixl, e    ; ix: sprite1
 
-	ld d, #0
-
 ;if ((sprite1->x + sprite1->coll_w) < sprite2->x) return 0;
 
-	ld l, ___offset_Sprite__x+0(ix)
-	ld h, ___offset_Sprite__x+1(ix)
-	ld e, ___offset_Sprite__coll_w(ix)
+	ld e, ___offset_Sprite__x+0(ix)
+	ld d, ___offset_Sprite__x+1(ix)
+	ld h, #0
+	ld l, ___offset_Sprite__coll_w(ix)
 	add hl, de
 
 	ld c, ___offset_Sprite__x+0(iy)
@@ -40,22 +39,20 @@ __asm
 
 ;if ((sprite2->x + sprite2->coll_w) < sprite1->x) return 0;
 
-	ld l, ___offset_Sprite__x+0(iy)
-	ld h, ___offset_Sprite__x+1(iy)
-	ld e, ___offset_Sprite__coll_w(iy)
-	add hl, de
+	ld h, a
+	ld l, ___offset_Sprite__coll_w(iy)
+	add hl, bc
 
-	ld c, ___offset_Sprite__x+0(ix)
-	ld b, ___offset_Sprite__x+1(ix)
 	xor a
-	sbc hl, bc
+	sbc hl, de
 	jp c, 0$     ; return 0
 
 ;if ((sprite1->y + sprite1->coll_h) < sprite2->y) return 0;
 
-	ld l, ___offset_Sprite__y+0(ix)
-	ld h, ___offset_Sprite__y+1(ix)
-	ld e, ___offset_Sprite__coll_h(ix)
+	ld e, ___offset_Sprite__y+0(ix)
+	ld d, ___offset_Sprite__y+1(ix)
+	ld h, a
+	ld l, ___offset_Sprite__coll_h(ix)
 	add hl, de
 
 	ld c, ___offset_Sprite__y+0(iy)
@@ -66,15 +63,12 @@ __asm
 
 ;if ((sprite2->y + sprite2->coll_h) < sprite1->y) return 0;
 
-	ld l, ___offset_Sprite__y+0(iy)
-	ld h, ___offset_Sprite__y+1(iy)
-	ld e, ___offset_Sprite__coll_h(iy)
-	add hl, de
+	ld h, a
+	ld l, ___offset_Sprite__coll_h(iy)
+	add hl, bc
 
-	ld c, ___offset_Sprite__y+0(ix)
-	ld b, ___offset_Sprite__y+1(ix)
 	xor a
-	sbc hl, bc
+	sbc hl, de
 	jp c, 0$     ; return 0
 
 	inc a        ; return 1 
