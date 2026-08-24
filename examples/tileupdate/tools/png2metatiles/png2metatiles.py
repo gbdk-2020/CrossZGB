@@ -195,7 +195,7 @@ def main(argv=None):
                 for y in range(int(options.height)):
                     for x in range(int(options.width)):
                         outf.write(bytes("\tMETASPR_ITEM({:d}, {:d}, {:d}, (S_PAL({:d}){:s})),\n".format(dy, dx, idx, 0, "|S_PALETTE" if (int(options.dmg_pal) == 1) else ""), "ascii"))
-                        idx += 1
+                        idx += 1 if (int(options.tileheight) == 8) else 2
                         dy = 0
                         dx = 8
                     dx = -((int(options.width) - 1) * 8)
