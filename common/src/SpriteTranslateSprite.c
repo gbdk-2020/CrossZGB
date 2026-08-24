@@ -4,14 +4,14 @@
 #include "Sprite.h"
 #include "Scroll.h"
 
-static UINT8* tile_coll;
 UINT8 TranslateSprite(Sprite* sprite, INT8 x, INT8 y) {
-	UINT8 ret = 0;
+	static UINT8* tile_coll;
 	INT16 pivot_x, pivot_y;
-	UINT8 start_tile_x, end_tile_x;
-	UINT8 start_tile_y, end_tile_y;
+	static UINT16 start_tile_x, end_tile_x;
+	static UINT16 start_tile_y, end_tile_y;
+	UINT8 ret = 0;
 	UINT8 scroll_coll_group;
-	UINT8 tmp;
+	UINT16 tmp;
 	if (x) {
 		if (x > 0) {
 			pivot_x = sprite->x + (UINT8)(sprite->coll_w - 1u);
