@@ -6,7 +6,6 @@
 #if defined(SEGA)
 void TickAnimSprite(void) NAKED {
 __asm
-
 	ld iy, (_THIS)
 	ld l, ___offset_Sprite__anim_data+0(iy) 
 	ld h, ___offset_Sprite__anim_data+1(iy)      ; hl: THIS->anim_data
