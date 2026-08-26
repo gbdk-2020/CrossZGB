@@ -3,7 +3,6 @@
 #include "Vector.h"
 #include "Sprite.h"
 
-extern UINT8 delta_time;
 extern UINT8 next_oam_idx;
 
 extern INT16 sprite_screen_x, sprite_screen_y;

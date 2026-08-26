@@ -71,7 +71,7 @@ __endasm;
 #else
 void TickAnimSprite(void) {
 	if (THIS->anim_data) {
-		THIS->anim_accum_ticks += (THIS->anim_speed << delta_time);
+		THIS->anim_accum_ticks += ((delta_time) ? (THIS->anim_speed << 1) : THIS->anim_speed);
 		if (THIS->anim_accum_ticks >= SPRITE_ANIM_MAX_TICKS) {
 			THIS->anim_accum_ticks -= SPRITE_ANIM_MAX_TICKS;
 
