@@ -115,9 +115,12 @@ void ScrollSetMap(UINT8 map_bank, const struct MapInfo* map);
 void ScrollInitTilesFromMap(UINT8 first_tile, UINT8 map_bank, const struct MapInfo* map);
 #define InitScrollTiles(FIRST_TILE, TILE_MAP) ScrollInitTilesFromMap((FIRST_TILE), BANK((TILE_MAP)), &(TILE_MAP))
 
+#define COLL_GR_DEFAULT 0x01
+#define COLL_GR_DOWN 0x080
+
 typedef enum {
 	COLL_GROUP_0 = 0x01,
-	COLL_GROUP_DEFAULT = 0x01,
+	COLL_GROUP_DEFAULT = COLL_GR_DEFAULT,
 	COLL_GROUP_1 = 0x02,
 	COLL_GROUP_2 = 0x04,
 	COLL_GROUP_3 = 0x08,
@@ -125,7 +128,7 @@ typedef enum {
 	COLL_GROUP_5 = 0x20,
 	COLL_GROUP_6 = 0x40,
 	COLL_GROUP_7 = 0x80,
-	COLL_GROUP_DOWN = 0x80 
+	COLL_GROUP_DOWN = COLL_GR_DOWN 
 } CollisionGroup;
 
 void ScrollInitCollisions(const UINT8* coll_list, const UINT8* coll_list_down);
