@@ -3,7 +3,9 @@
    ************************************************** */
 
 #include <gbdk/platform.h>
+
 #include <stdint.h>
+#include <stddef.h>
 
 #include "PSGlib.h"
 
@@ -30,6 +32,10 @@ typedef struct shadow_reg_t {
     uint8_t data;
     uint8_t volume;
 } shadow_reg_t;
+
+const void AT(offsetof(shadow_reg_t, tone))     __offset_shadow_reg_t__tone;
+const void AT(offsetof(shadow_reg_t, data))     __offset_shadow_reg_t__data;
+const void AT(offsetof(shadow_reg_t, volume))   __offset_shadow_reg_t__volume;
 
 static shadow_reg_t PSGShadow[4];       // shadow registers to retrigger channels
 
@@ -169,7 +175,7 @@ void PSGFrame (void) NAKED {
 
         bit 4, b
         jp z, 14$
-        ld 2(iy), b                     ; volume byte
+        ld ___offset_shadow_reg_t__volume(iy), b
         jp 17$
 14$:
         ld a, (_PSGLastChannel)
@@ -178,10 +184,10 @@ void PSGFrame (void) NAKED {
 
         bit 7, b
         jp z, 13$
-        ld 0(iy), b                     ; tone byte
+        ld ___offset_shadow_reg_t__tone(iy), b
         jp 17$
 13$:
-        ld 1(iy), b                     ; tone data byte
+        ld ___offset_shadow_reg_t__data(iy), b
         jp 17$
 
 16$:
@@ -189,8 +195,8 @@ void PSGFrame (void) NAKED {
         and #0b00000111
         or #(PSG_LATCH | PSG_CH3)
         ld b, a
-        ld 0(iy), b                     ; tone byte
-        ld 1(iy), b                     ; tone data byte
+        ld ___offset_shadow_reg_t__tone(iy), b
+        ld ___offset_shadow_reg_t__data(iy), b
 
 ; --- check mute and write -------
 17$:
