@@ -4,30 +4,19 @@
 #include "Coroutines.h"
 #include "ZGBMain.h"
 
-// global reference to Inky
+// global reference to Pinky
 Sprite * PINKY;
 
-// declare the logic coroutine
-BANKREF_EXTERN(PinkyLogic)
-void PinkyLogic(void * custom_data) BANKED;
+void EnemyLogic(void * custom_data) BANKED;
 
-void START(void) {
-	// make sprites not die offscreen
-	THIS->lim_x = THIS->lim_y = 256;
-	// allocate coroutine context, set coroutine function and pass CUSTOM_DATA as data, remove sprite if failed
-	INIT_CORO(BANK(PinkyLogic), PinkyLogic);
-	// initialize global reference
+void PinkyLogic(void * custom_data) BANKED {
 	PINKY = THIS;
+	EnemyLogic(custom_data);
 }
 
-void UPDATE(void) {
-	// iterate coroutine
-	ITER_CORO;
-}
-
-void DESTROY(void) {
-	// remove global reference
+void PinkyLogicFinalizer(void * custom_data) BANKED {
+	(void) custom_data;
 	PINKY = NULL;
-	// deallocate coroutine context
-	FREE_CORO;
 }
+
+SPRITE_COROUTINE(PinkyLogic, PinkyLogicFinalizer)

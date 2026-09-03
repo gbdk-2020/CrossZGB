@@ -7,27 +7,16 @@
 // global reference to Inky
 Sprite * INKY;
 
-// declare the logic coroutine
-BANKREF_EXTERN(InkyLogic)
-void InkyLogic(void * custom_data) BANKED;
+void EnemyLogic(void * custom_data) BANKED;
 
-void START(void) {
-	// initialize global reference
+void InkyLogic(void * custom_data) BANKED {
 	INKY = THIS;
-	// make sprites not die offscreen
-	THIS->lim_x = THIS->lim_y = 256;
-	// allocate coroutine context, set coroutine function and pass CUSTOM_DATA as data, remove sprite if failed
-	INIT_CORO(BANK(InkyLogic), InkyLogic);
+	EnemyLogic(custom_data);
 }
 
-void UPDATE(void) {
-	// iterate coroutine
-	ITER_CORO;
-}
-
-void DESTROY(void) {
-	// remove global reference
+void InkyLogicFinalizer(void * custom_data) BANKED {
+	(void) custom_data;
 	INKY = NULL;
-	// deallocate coroutine context
-	FREE_CORO;
 }
+
+SPRITE_COROUTINE(InkyLogic, InkyLogicFinalizer)

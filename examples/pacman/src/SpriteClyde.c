@@ -4,30 +4,19 @@
 #include "Coroutines.h"
 #include "ZGBMain.h"
 
-// global reference to Blinky
+// global reference to Clyde
 Sprite * CLYDE;
 
-// declare the logic coroutine
-BANKREF_EXTERN(ClydeLogic)
-void ClydeLogic(void * custom_data) BANKED;
+void EnemyLogic(void * custom_data) BANKED;
 
-void START(void) {
-	// make sprites not die offscreen
-	THIS->lim_x = THIS->lim_y = 256;
-	// allocate coroutine context
-	INIT_CORO(BANK(ClydeLogic), ClydeLogic);
-	// initialize global reference
+void ClydeLogic(void * custom_data) BANKED {
 	CLYDE = THIS;
+	EnemyLogic(custom_data);
 }
 
-void UPDATE(void) {
-	// iterate coroutine
-	ITER_CORO;
-}
-
-void DESTROY(void) {
-	// remove global reference
+void ClydeLogicFinalizer(void * custom_data) BANKED {
+	(void) custom_data;
 	CLYDE = NULL;
-	// deallocate coroutine context
-	FREE_CORO;
 }
+
+SPRITE_COROUTINE(ClydeLogic, ClydeLogicFinalizer)

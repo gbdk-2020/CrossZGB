@@ -1,5 +1,7 @@
 #include "Banks/SetAutoBank.h"
 
+#include "Coroutines.h"
+
 #include "Scroll.h"
 #include "SpriteManager.h"
 #include "Fade.h"
@@ -136,29 +138,33 @@ void load_level(void) {
 	ScrollInitCollisionGroup(COLL_GROUP_1, coll_tiles);
 }
 
-void START(void) {
+void GameLogic(void * custom_data) BANKED {
+	(void)custom_data;
+
 	// initialization
 	current_level = 0;
 	game_score = 0;
 	// load level
 	load_level();
-}
+	YIELD;
 
-void UPDATE(void) {
-	if (!dot_count) {
-		if (levels[++current_level].map) {
-			// switch to the next level
-			FadeIn();
-			load_level();
-			FadeOut();
-		} else {
-			// todo: win state
-			SetState(StateMenu);
+	for (;; YIELD) {
+		if (!dot_count) {
+			if (levels[++current_level].map) {
+				// switch to the next level
+				FadeIn();
+				load_level();
+				FadeOut();
+			} else {
+				// todo: win state
+				SetState(StateMenu);
+			}
 		}
 	}
 }
 
-void DESTROY(void) {
+void GameLogicFinalizer(void * custom_data) BANKED {
+	(void)custom_data;
 #ifdef USE_SAVEGAME
 	ENABLE_RAM;
 	SWITCH_RAM(0);
@@ -166,3 +172,5 @@ void DESTROY(void) {
 	DISABLE_RAM;
 #endif
 }
+
+STATE_COROUTINE(GameLogic, GameLogicFinalizer)

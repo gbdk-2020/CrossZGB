@@ -54,11 +54,15 @@ void ScaredSetType(Sprite * spr, UINT8 type) BANKED;
 void PlayerLogic(void * custom_data) BANKED {
 	custom_data;
 
+	// initialize global reference
+	PLAYER = THIS;
+
 	player_check_collision = TRUE;
 	player_dir = player_next_dir = DIR_NONE;
 	SetSpriteAnim(THIS, anim_none, ANIMATION_SPEED);
 	// assign player collision groups to COLL_GROUP_1
 	SetSpriteCollisionGroup(THIS, COLL_GROUP_1, COLL_GROUP_1);
+
 	while (TRUE) {
 		// slow down pacman movement
 		if (IS_EVEN_FRAME) {
@@ -187,22 +191,10 @@ void PlayerLogic(void * custom_data) BANKED {
 	} 
 }
 
-
-void START(void) {
-	// allocate coroutine context, set coroutine function and pass CUSTOM_DATA as data, remove sprite if failed
-	INIT_CORO(BANK(SpritePlayer), PlayerLogic);
-	// initialize global reference
-	PLAYER = THIS;
-}
-
-void UPDATE(void) {
-	// iterate coroutine
-	ITER_CORO;
-}
-
-void DESTROY(void) {
+void PlayerLogicFinalizer(void * custom_data) BANKED {
+	(void) custom_data;
 	// remove global reference
 	PLAYER = NULL;
-	// deallocate coroutine context
-	FREE_CORO;
 }
+
+SPRITE_COROUTINE(PlayerLogic, PlayerLogicFinalizer)

@@ -72,12 +72,13 @@ inline void WrapEnemy(void) {
 	}
 }
 
-// Inky logic coroutine
-BANKREF(InkyLogic)
-void InkyLogic(void * custom_data) BANKED {
-	custom_data;
+// Enemy logic coroutine
+void EnemyLogic(void * custom_data) BANKED {
+	(void)custom_data;
 
 	direction_e current_dir, next_dir;
+
+	THIS->lim_x = THIS->lim_y = 256;
 
 	next_dir = DIR_UP, current_dir = DIR_RIGHT;
 
@@ -104,24 +105,6 @@ void InkyLogic(void * custom_data) BANKED {
 	}
 }
 
-// Pinky logic coroutine
-BANKREF(PinkyLogic)
-void PinkyLogic(void * custom_data) BANKED {
-	InkyLogic(custom_data);
-}
-
-// Blinky logic coroutine
-BANKREF(BlinkyLogic)
-void BlinkyLogic(void * custom_data) BANKED {
-	InkyLogic(custom_data);
-}
-
-// Clyde logic coroutine
-BANKREF(ClydeLogic)
-void ClydeLogic(void * custom_data) BANKED {
-	InkyLogic(custom_data);
-}
-
 // pill active
 extern UINT8 pill_active;
 
@@ -138,11 +121,12 @@ static UINT8 anim_scared_warn[] = VECTOR(0, 1, 2, 3);
 void EatenSetType(Sprite * spr, UINT8 type) BANKED;
 
 // Scared sprite logic coroutine
-BANKREF(ScaredLogic)
 void ScaredLogic(void * custom_data) BANKED {
-	custom_data;
+	(void)custom_data;
 
 	direction_e current_dir, next_dir;
+
+	THIS->lim_x = THIS->lim_y = 256;
 
 	INIT_SKIP_FRAMES(SCARED_SPEED);
 
@@ -194,9 +178,9 @@ static UINT8 anim_eaten_down[]  = VECTOR( 2 );
 static UINT8 anim_eaten_left[]  = VECTOR( 3 );
 static UINT8 anim_eaten_right[] = VECTOR( 1 );
 
-BANKREF(EatenLogic)
 void EatenLogic(void * custom_data) BANKED {
-	custom_data;
+	(void)custom_data;
+	THIS->lim_x = THIS->lim_y = 256;
 	UINT8 src_x = (THIS->x + 4) >> 3, src_y = (THIS->y + 4) >> 3; 
 	UINT8 path_length = lee_find_path(src_x, src_y, target.x, target.y);
 	if (path_length != LEE_MAX_STEPS) {
