@@ -9,12 +9,19 @@ palette_color_t ZGB_Fading_BPal[16];
 palette_color_t ZGB_Fading_SPal[16];
 
 palette_color_t UpdateColor(UINT8 i, palette_color_t col) {
-	INT8 BR = PAL_RED(ZGB_Fading_SPal[0]), BG = PAL_GREEN(ZGB_Fading_SPal[0]), BB = PAL_BLUE(ZGB_Fading_SPal[0]);
-	INT8 R = PAL_RED(col), G = PAL_GREEN(col), B = PAL_BLUE(col);
+	INT8 tmp;
 
-	R = (R > BR) ? MAX(BR, R - i) : MIN(BR, R + i);
-	G = (G > BG) ? MAX(BG, G - i) : MIN(BG, G + i);
-	B = (B > BB) ? MAX(BB, B - i) : MIN(BB, B + i);
+	tmp = PAL_RED(ZGB_Fading_SPal[0]); 
+	INT8 R = PAL_RED(col); 
+	R = (R > tmp) ? MAX(tmp, R - i) : MIN(tmp, R + i);
+
+	tmp = PAL_GREEN(ZGB_Fading_SPal[0]);
+	INT8 G = PAL_GREEN(col); 
+	G = (G > tmp) ? MAX(tmp, G - i) : MIN(tmp, G + i);
+
+	tmp = PAL_BLUE(ZGB_Fading_SPal[0]);
+	INT8 B = PAL_BLUE(col);
+	B = (B > tmp) ? MAX(tmp, B - i) : MIN(tmp, B + i);
 
 	return RGB(R, G, B);
 }
@@ -22,13 +29,13 @@ palette_color_t UpdateColor(UINT8 i, palette_color_t col) {
 void FadeStepColor(UINT8 i) {
 	static palette_color_t palette[16];
 	static palette_color_t palette_s[16];
-	palette_color_t* col = ZGB_Fading_BPal;
-	palette_color_t* col_s = ZGB_Fading_SPal;
 
-	for(UINT8 c = 0; c < 16; ++c, ++col, ++col_s) {
-		palette[c] = UpdateColor(i, *col);
-		palette_s[c] = UpdateColor(i, *col_s);
-	};
+	for (palette_color_t *src = ZGB_Fading_BPal, *dest = palette; src < ZGB_Fading_BPal + 16; ) {
+		*dest++ = UpdateColor(i, *src++);
+	}
+	for (palette_color_t *src = ZGB_Fading_SPal, *dest = palette_s; src < ZGB_Fading_SPal + 16; ) {
+		*dest++ = UpdateColor(i, *src++);
+	}
 
 	WAIT_WRITABLE_CRAM;	// avoid snow on screen
 
@@ -41,16 +48,16 @@ void FadeStepColor(UINT8 i) {
 }
 
 void FadeIn(void) BANKED {
-	FadeStepColor(0);	
-	FadeStepColor(1);	
-	FadeStepColor(2);	
-	FadeStepColor(3);	
+	FadeStepColor(0);
+	FadeStepColor(1);
+	FadeStepColor(2);
+	FadeStepColor(3);
 	DISPLAY_OFF;
 }
 
 void FadeOut(void) BANKED {
-	FadeStepColor(3);	
-	FadeStepColor(2);	
-	FadeStepColor(1);	
-	FadeStepColor(0);	
+	FadeStepColor(3);
+	FadeStepColor(2);
+	FadeStepColor(1);
+	FadeStepColor(0);
 }
