@@ -396,7 +396,7 @@ void UPDATE(void) {
 		finally_update_y:
 			data->pos.y = new_y;
 
-		} else if (plat_delta_y < 0) {
+		} else {
 
 			// Moving Upward
 			UINT8 tile_y = SUBPX_TO_TILE(new_y + replace_top);
