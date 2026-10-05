@@ -9,14 +9,14 @@
 #undef MUSIC_DRIVER_GBT
 #endif
 
-volatile UINT8 music_paused = 1;
+volatile UINT8 music_paused = TRUE;
 volatile UINT8 music_mute_mask = MUTE_MASK_NONE;
 volatile UINT8 sfx_priority = SFX_PRIORITY_MINIMAL;
 
 void* last_music = NULL;
 UINT8 last_music_bank = SFX_STOP_BANK;
 
-UINT8 stop_music_on_new_state = 1;
+UINT8 stop_music_on_new_state = TRUE;
 volatile UINT8 music_skip_interrupts;
 
 #if defined(SEGA)
@@ -172,5 +172,5 @@ void __PlayMusic(void* music, UINT8 bank, UINT8 loop) NONBANKED {
 		last_music = music;
 		last_music_bank = bank;
 	}
-	music_paused = 0;
+	music_paused = FALSE;
 }
