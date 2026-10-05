@@ -24,6 +24,14 @@
 #define ENABLE_SPRITE_FLICKERING (enable_flickering=TRUE)
 #define DISABLE_SPRITE_FLICKERING (enable_flickering=FALSE)
 
+#if defined(NINTENDO)
+void set_sprite_native_data_wrap(uint8_t first_tile, uint8_t nb_tiles, const uint8_t *data);
+#elif defined(SEGA)
+inline void set_sprite_native_data_wrap(uint8_t start, uint16_t ntiles, const void *src) {
+	set_sprite_native_data(start, ntiles, src);
+}
+#endif
+
 //Pool
 extern Sprite* sprite_manager_sprites[];
 extern UINT8* sprite_manager_sprites_pool;

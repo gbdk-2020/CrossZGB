@@ -62,10 +62,6 @@ void SpriteManagerReset(void) {
 	sprite_manager_purge = FALSE;
 }
 
-#if defined(NINTENDO)
-void set_sprite_native_data_wrap(uint8_t first_tile, uint8_t nb_tiles, const uint8_t *data);
-#endif
-
 UINT8 SpriteManagerLoad(UINT8 sprite_type) {
 	// check if already loaded
 	if (((INT8)spriteIdxs[sprite_type]) >= last_sprite_loaded)
