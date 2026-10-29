@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/include/**",
+                "${env:ZGB_PATH}/include/**",
+                "${env:GBDK_HOME}/include/**"
+            ],
+            "defines": ["__PORT_sm83", "__TARGET_gb", "HUGE_TRACKER"],
+            "compilerPath": "",
+            "cStandard": "c11",
+            "intelliSenseMode": "${default}",
+            "compilerArgs": [],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

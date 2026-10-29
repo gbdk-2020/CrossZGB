@@ -1,0 +1,52 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "emulicious-debugger",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${workspaceFolder}/Debug/rom.gb",
+            "port": 58870,
+            "stopOnEntry": false,
+            "additionalSrcFolders": "${env:ZGB_PATH}",
+            "emuliciousPath": "${env:ZGB_PATH}/../env/emulicious/emulicious.jar",
+            "preLaunchTask": "Debug",
+        },
+        {
+            "type": "emulicious-debugger",
+            "request": "launch",
+            "name": "DebugColor",
+            "program": "${workspaceFolder}/DebugColor/rom.gbc",
+            "port": 58870,
+            "stopOnEntry": false,
+            "additionalSrcFolders": "${env:ZGB_PATH}",
+            "emuliciousPath": "${env:ZGB_PATH}/../env/emulicious/emulicious.jar",
+            "preLaunchTask": "DebugColor",
+        },
+        {
+            "type": "emulicious-debugger",
+            "request": "launch",
+            "name": "Release",
+            "program": "${workspaceFolder}/Release/rom.gb",
+            "port": 58870,
+            "stopOnEntry": false,
+            "additionalSrcFolders": "${env:ZGB_PATH}",
+            "emuliciousPath": "${env:ZGB_PATH}/../env/emulicious/emulicious.jar",
+            "preLaunchTask": "Release",
+        },
+        {
+            "type": "emulicious-debugger",
+            "request": "launch",
+            "name": "ReleaseColor",
+            "program": "${workspaceFolder}/ReleaseColor/rom.gbc",
+            "port": 58870,
+            "stopOnEntry": false,
+            "additionalSrcFolders": "${env:ZGB_PATH}",
+            "emuliciousPath": "${env:ZGB_PATH}/../env/emulicious/emulicious.jar",
+            "preLaunchTask": "ReleaseColor",
+        }
+    ]
+}
