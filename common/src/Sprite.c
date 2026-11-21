@@ -150,7 +150,7 @@ void InitSprite(Sprite* sprite, UINT8 sprite_type) {
 
 	SetVisible(sprite, TRUE);
 	SetPersistent(sprite, FALSE);
-	SetAnimSpeed(sprite, 33u)'
+	SetAnimSpeed(sprite, 33u);
 	SetAnimationLoop(sprite, TRUE);
 
 	UINT8 __save = CURRENT_BANK;
