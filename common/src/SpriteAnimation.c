@@ -5,7 +5,7 @@
 
 void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
 	// Update anim_speed before potentially returning the function
-	sprite->anim_speed = speed;
+	SetAnimSpeed(sprite, speed);
 	
 	if (sprite->anim_data == data) return;
 	
