@@ -107,6 +107,9 @@ inline void SetPersistent(Sprite* sprite, UINT8 persistent) {
 inline void SetAnimationLoop(Sprite* sprite, UINT8 loop_anim) {
 	sprite->loop_anim = (loop_anim);
 }
+inline void SetAnimSpeed(Sprite* sprite, UINT8 anim_speed) {
+	sprite->anim_speed = (anim_speed);
+}
 
 void DrawSprite(void);
 
