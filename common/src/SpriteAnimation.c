@@ -7,8 +7,10 @@ void SetSpriteAnim(Sprite* sprite, const UINT8* data, UINT8 speed) {
 	if (sprite->anim_data == data) return;
 
 	sprite->anim_data = (UINT8* )data;
-	SetFrame(sprite, VECTOR_GET(data, 0));
+	sprite->mt_sprite = GetSpriteAnimation(sprite, VECTOR_GET(data, 0));
+	sprite->anim_frame = 0;
 	sprite->anim_accum_ticks = 0;
+
 	SetAnimationSpeed(sprite, speed);
 }
 
