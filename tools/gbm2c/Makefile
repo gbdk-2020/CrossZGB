@@ -17,7 +17,7 @@ endif
 
 
 CXX = $(TOOLSPREFIX)g++
-CXXFLAGS = -Os -g -I../gbr2c -Wno-unused-result # -Wall -Wextra -pedantic
+CXXFLAGS = -Os -g -I../gbr2c -Wno-unused-result -fsigned-char # -Wall -Wextra -pedantic
 LFLAGS = -g
 
 ifeq ($(OS),Windows_NT)
